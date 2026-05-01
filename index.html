@@ -572,7 +572,7 @@
     btn.disabled = true;
 
     try {
-      vocabPairs = await parseAndTranslate(raw, fromLang, toLang);
+      vocabPairs = parseAndTranslate(raw, fromLang, toLang);
     } catch(e) {
       alert('Etwas ist schiefgelaufen. Bitte nochmal versuchen! 🐬');
       btn.innerHTML = 'Los geht\'s, Lotte! 🚀';
@@ -603,7 +603,29 @@
     renderQuestion();
   }
 
-  async function parseAndTranslate(raw, fromLang, toLang) {
+   function parseAndTranslate(raw, fromLang, toLang) {
+  const lines = raw.split("\n");
+  const result = [];
+
+  lines.forEach(line => {
+    const parts = line.split(",");
+
+    if (parts.length === 2) {
+      result.push({
+        from: parts[0].trim(),
+        to: parts[1].trim()
+      });
+    } else if (parts.length === 1 && parts[0].trim() !== "") {
+      // Wenn keine Übersetzung da ist, nehmen wir erstmal das gleiche Wort
+      result.push({
+        from: parts[0].trim(),
+        to: parts[0].trim()
+      });
+    }
+  });
+
+  return result;
+}
     const prompt = `Du bist ein freundlicher Vokabel-Assistent für ein 10-jähriges Mädchen namens Lotte, das Delfine liebt.
 
 Der Nutzer hat folgende Eingabe gemacht (Sprache: ${fromLang}):
