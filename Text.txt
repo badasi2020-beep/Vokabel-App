@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lottes Delfin-Schule</title>
+</head>
+<body style="font-family:sans-serif;text-align:center;padding:20px;">
+
+<h1>🐬 Lottes Delfin-Schule</h1>
+
+<textarea id="input" placeholder="Haus, house&#10;Hund, dog" style="width:90%;height:100px;"></textarea><br><br>
+
+<button onclick="start()">Start</button>
+
+<div id="game" style="display:none;">
+  <h2 id="word"></h2>
+  <input id="answer"><br><br>
+  <button onclick="check()">Prüfen</button>
+  <p id="result"></p>
+</div>
+
+<script>
+let vocab = [];
+let current = 0;
+
+function start() {
+  const raw = document.getElementById("input").value;
+  vocab = raw.split("\n").map(l => {
+    const p = l.split(",");
+    return {from:p[0]?.trim(), to:p[1]?.trim()};
+  }).filter(v => v.from && v.to);
+
+  if(vocab.length < 1){
+    alert("Bitte Vokabeln eingeben");
+    return;
+  }
+
+  document.getElementById("game").style.display="block";
+  show();
+}
+
+function show(){
+  document.getElementById("word").innerText = vocab[current].from;
+  document.getElementById("answer").value="";
+  document.getElementById("result").innerText="";
+}
+
+function check(){
+  const val = document.getElementById("answer").value.trim().toLowerCase();
+  const correct = vocab[current].to.toLowerCase();
+
+  if(val === correct){
+    document.getElementById("result").innerText="Richtig 🎉";
+    current++;
+    if(current >= vocab.length){
+      alert("Fertig! 🐬");
+      current=0;
+    }
+    setTimeout(show,1000);
+  } else {
+    document.getElementById("result").innerText="Falsch ❌ ("+correct+")";
+  }
+}
+</script>
+
+</body>
+</html>
