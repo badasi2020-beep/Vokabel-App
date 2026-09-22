@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Route, Switch, Router as WouterRouter, useLocation } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import { ErrorBoundary } from "./components/error-boundary";
 import { Layout } from "./components/Layout";
 import { Overview } from "./pages/Overview";
@@ -53,9 +54,11 @@ function Router() {
   );
 }
 
+// Hash-basiertes Routing (#/aufgaben statt /aufgaben): funktioniert unabhängig davon,
+// unter welchem Pfad die App gerade läuft (eigene Domain, Replit, Vorschau-Artefakt, ...).
 export default function App() {
   return (
-    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+    <WouterRouter hook={useHashLocation}>
       <RoutedErrorBoundary>
         <Router />
       </RoutedErrorBoundary>
