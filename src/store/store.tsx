@@ -42,7 +42,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(() => loadData());
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // z.B. privater Modus / Speicher voll - Anzeige funktioniert trotzdem weiter.
+    }
   }, [data]);
 
   const setActivePerson = useCallback((personId: string) => {
