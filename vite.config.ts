@@ -1,9 +1,15 @@
+import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   base: "./",
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "src")
+    }
+  },
   plugins: [
     react(),
     VitePWA({
@@ -13,8 +19,8 @@ export default defineConfig({
         name: "Gemeinsam",
         short_name: "Gemeinsam",
         description: "Was wurde im Haushalt wirklich gemacht – gemeinsam sichtbar.",
-        theme_color: "#F6F1E7",
-        background_color: "#F6F1E7",
+        theme_color: "#F5F1E7",
+        background_color: "#F5F1E7",
         display: "standalone",
         start_url: ".",
         icons: [

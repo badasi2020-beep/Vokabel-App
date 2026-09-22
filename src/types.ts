@@ -1,63 +1,71 @@
-// Zentrale Datentypen für "Gemeinsam".
-// Bewusst so gebaut, dass jede Entität eine stabile `id` hat und History-Einträge
-// unabhängig von späteren Änderungen an Aufgaben/Kategorien bleiben (Snapshot-Prinzip),
-// damit ein Umzug auf eine gemeinsame Cloud-Datenbank später keine Datenmodell-Änderung braucht.
-
-export type ID = string;
-
 export interface Person {
-  id: ID;
+  id: string;
   name: string;
-  color: string; // für kleine Avatare/Badges
+  initial: string;
+  color: string;
 }
 
 export interface Category {
-  id: ID;
+  id: string;
   name: string;
-  icon: string; // Emoji als einfaches, dependency-freies Icon
-}
-
-export type RecurrenceUnit = "day" | "week" | "month" | "year";
-
-export interface Recurrence {
-  unit: RecurrenceUnit;
-  interval: number; // z.B. unit="day", interval=7 => alle 7 Tage
-  // Optional: fester Wochentag (0=So..6=Sa) für wiederkehrende Termine
-  weekday?: number;
-  // Optional: feste Uhrzeit "HH:MM"
-  time?: string;
+  icon: string;
 }
 
 export interface Task {
-  id: ID;
+  id: string;
   name: string;
-  categoryId: ID | null;
+  categoryId: string;
+  room?: string;
   description?: string;
-  points?: number; // undefined/null = keine Punkte hinterlegt
-  recurrence?: Recurrence | null; // null/undefined = einmalige/Ad-hoc-Aufgabe
-  archived?: boolean;
-  createdAt: string; // ISO
-  // Letzte Erledigung wird aus der History abgeleitet, nicht hier gespeichert,
-  // damit es nur eine Quelle der Wahrheit gibt.
+  points: number | null;
+  repeatDays: number | null;
+  timerEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface HistoryEntry {
-  id: ID;
-  taskId: ID;
-  // Snapshot-Felder: bleiben unverändert, auch wenn sich die Aufgabe später ändert.
+// Snapshot-Felder (taskNameSnapshot, pointsSnapshot, ...) bleiben unverändert,
+// auch wenn sich die Aufgabe später ändert - das ist die Dokumentation von damals.
+export interface Completion {
+  id: string;
+  taskId: string;
+  taskNameSnapshot: string;
+  personId: string;
+  personNameSnapshot: string;
+  categoryId: string;
+  categoryNameSnapshot: string;
+  pointsSnapshot: number | null;
+  completedAt: string;
+  durationSeconds?: number;
+}
+
+export interface Activity {
+  id: string;
+  name: string;
+  points: number;
+  personId: string;
+  categoryId: string;
+  createdAt: string;
+  durationSeconds?: number;
+}
+
+export interface TaskChange {
+  id: string;
+  taskId: string;
   taskName: string;
-  categoryId: ID | null;
-  points: number | null; // Punktwert zum Zeitpunkt der Erledigung, null = keine Punkte
-  personId: ID;
-  completedAt: string; // ISO-Zeitstempel
-  durationSeconds?: number; // optional, aus Timer oder manueller Eingabe
+  changedAt: string;
+  personId: string;
+  personName: string;
+  before: string;
+  after: string;
 }
 
-export interface AppData {
+export interface Store {
   people: Person[];
   categories: Category[];
   tasks: Task[];
-  history: HistoryEntry[];
-  activePersonId: ID;
-  weeklyMoment?: string; // freitextlicher "Wochenmoment"
+  completions: Completion[];
+  activities: Activity[];
+  changes: TaskChange[];
+  activePersonId: string;
 }

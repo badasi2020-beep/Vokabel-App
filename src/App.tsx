@@ -1,41 +1,64 @@
-import { useState } from "react";
-import { BottomNav, type Tab } from "./components/BottomNav";
-import { PersonSwitcher } from "./components/PersonSwitcher";
-import { Home } from "./pages/Home";
-import { Tasks } from "./pages/Tasks";
-import { History } from "./pages/History";
-import { Stats } from "./pages/Stats";
-import { Settings } from "./pages/Settings";
+import { useState, type ReactNode } from "react";
+import { Route, Switch, Router as WouterRouter, useLocation } from "wouter";
+import { ErrorBoundary } from "./components/error-boundary";
+import { Layout } from "./components/Layout";
+import { Overview } from "./pages/Overview";
+import { TasksPage } from "./pages/TasksPage";
+import { HistoryPage } from "./pages/HistoryPage";
+import { StatsPage } from "./pages/StatsPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { NotFound } from "./pages/NotFound";
+import { useStore } from "./store";
 
-export default function App() {
-  const [tab, setTab] = useState<Tab>("woche");
-  const [settingsOpen, setSettingsOpen] = useState(false);
+function RoutedErrorBoundary({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
+  return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
+}
+
+function Router() {
+  const { store, update } = useStore();
+  const [notice, setNotice] = useState("");
+
+  const notify = (text: string) => {
+    setNotice(text);
+    window.setTimeout(() => setNotice(""), 2400);
+  };
 
   return (
-    <div className="min-h-full flex flex-col">
-      <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur px-5 pt-5 pb-3 flex items-center justify-between">
-        <span className="font-serif text-lg text-forest tracking-wide">Gemeinsam</span>
-        <div className="flex items-center gap-3">
-          <PersonSwitcher />
-          <button
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Einstellungen öffnen"
-            className="h-9 w-9 rounded-full bg-cream-deep text-forest flex items-center justify-center"
-          >
-            ⚙️
-          </button>
+    <Layout store={store} onPerson={(id) => { update({ activePersonId: id }); notify("Aktive Person gewechselt."); }}>
+      <Switch>
+        <Route path="/">
+          <Overview store={store} update={update} notify={notify} />
+        </Route>
+        <Route path="/aufgaben">
+          <TasksPage store={store} update={update} notify={notify} />
+        </Route>
+        <Route path="/historie">
+          <HistoryPage store={store} />
+        </Route>
+        <Route path="/statistik">
+          <StatsPage store={store} />
+        </Route>
+        <Route path="/einstellungen">
+          <SettingsPage store={store} update={update} notify={notify} />
+        </Route>
+        <Route component={NotFound} />
+      </Switch>
+      {notice && (
+        <div className="toast-note" role="status" data-testid="status-toast">
+          {notice}
         </div>
-      </header>
+      )}
+    </Layout>
+  );
+}
 
-      <main className="flex-1 px-5 pb-28 max-w-md w-full mx-auto">
-        {tab === "woche" && <Home />}
-        {tab === "aufgaben" && <Tasks />}
-        {tab === "historie" && <History />}
-        {tab === "statistik" && <Stats />}
-      </main>
-
-      <BottomNav active={tab} onChange={setTab} />
-      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </div>
+export default function App() {
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <RoutedErrorBoundary>
+        <Router />
+      </RoutedErrorBoundary>
+    </WouterRouter>
   );
 }

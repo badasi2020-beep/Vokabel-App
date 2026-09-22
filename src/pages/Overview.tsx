@@ -1,0 +1,228 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "wouter";
+import { ChevronRight, Plus, X } from "lucide-react";
+import { TaskCard } from "../components/TaskCard";
+import { isDue, relativeDate } from "../lib/utils";
+import { makeId } from "../store";
+import type { Store, Task } from "../types";
+
+export function Overview({
+  store,
+  update,
+  notify
+}: {
+  store: Store;
+  update: (patch: Partial<Store>) => void;
+  notify: (text: string) => void;
+}) {
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [activity, setActivity] = useState({ name: "", points: "1" });
+  const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const interval = window.setInterval(() => setTick((tick) => tick + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, [running]);
+
+  const dueTasks = store.tasks.filter((task) => isDue(task, store.completions));
+  const active = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  weekStart.setHours(0, 0, 0, 0);
+  const weekCompletions = store.completions.filter((item) => new Date(item.completedAt) >= weekStart);
+  const weekPoints =
+    weekCompletions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) +
+    store.activities.filter((item) => new Date(item.createdAt) >= weekStart).reduce((sum, item) => sum + item.points, 0);
+
+  const recent = [
+    ...store.completions,
+    ...store.activities.map((item) => ({
+      ...item,
+      taskNameSnapshot: item.name,
+      personNameSnapshot: store.people.find((person) => person.id === item.personId)?.name || "",
+      pointsSnapshot: item.points,
+      completedAt: item.createdAt
+    }))
+  ]
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+    .slice(0, 4);
+
+  const complete = (task: Task, seconds?: number) => {
+    const category = store.categories.find((item) => item.id === task.categoryId);
+    const completion = {
+      id: makeId("completion"),
+      taskId: task.id,
+      taskNameSnapshot: task.name,
+      personId: active.id,
+      personNameSnapshot: active.name,
+      categoryId: task.categoryId,
+      categoryNameSnapshot: category?.name || "Sonstiges",
+      pointsSnapshot: task.points,
+      completedAt: new Date().toISOString(),
+      ...(seconds ? { durationSeconds: seconds } : {})
+    };
+    update({ completions: [completion, ...store.completions] });
+    setRunning(null);
+    notify(`${task.name} ist erledigt. Danke, ${active.name}.`);
+  };
+
+  const submitActivity = (event: FormEvent) => {
+    event.preventDefault();
+    if (!activity.name.trim()) return;
+    update({
+      activities: [
+        {
+          id: makeId("activity"),
+          name: activity.name,
+          points: Number(activity.points) || 1,
+          personId: active.id,
+          categoryId: "c3",
+          createdAt: new Date().toISOString()
+        },
+        ...store.activities
+      ]
+    });
+    setActivity({ name: "", points: "1" });
+    setActivityOpen(false);
+    notify("Aktivität gespeichert.");
+  };
+
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
+          <h1>Hallo, {active.name}.</h1>
+        </div>
+        <button className="btn btn-primary" onClick={() => setActivityOpen(true)} data-testid="button-log-activity">
+          <Plus size={16} />
+          Aktivität eintragen
+        </button>
+      </div>
+
+      <section className="card summary-strip" style={{ marginBottom: 18 }}>
+        <div className="summary-figures">
+          <span className="summary-figure">
+            <strong>{dueTasks.length}</strong>
+            <span>offene Aufgaben</span>
+          </span>
+          <span className="summary-figure">
+            <strong>{weekCompletions.length}</strong>
+            <span>diese Woche erledigt</span>
+          </span>
+          <span className="summary-figure">
+            <strong>{weekPoints}</strong>
+            <span>Punkte diese Woche</span>
+          </span>
+        </div>
+      </section>
+
+      <section className="card card-pad">
+        <div className="section-head">
+          <h2>Was ansteht</h2>
+          <Link href="/aufgaben" className="btn btn-ghost" data-testid="link-all-tasks">
+            Alle Aufgaben <ChevronRight size={15} />
+          </Link>
+        </div>
+        <div className="task-list">
+          {dueTasks.length ? (
+            dueTasks
+              .slice(0, 6)
+              .map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  category={store.categories.find((cat) => cat.id === task.categoryId)}
+                  onComplete={complete}
+                  running={running?.id === task.id ? running.started : null}
+                  onStart={(item) => {
+                    if (running?.id === item.id) {
+                      complete(item, Math.round((Date.now() - running.started) / 1000));
+                    } else {
+                      setRunning({ id: item.id, started: Date.now() });
+                    }
+                  }}
+                />
+              ))
+          ) : (
+            <div className="empty">
+              <strong>Gerade nichts Fälliges.</strong>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="card card-pad" style={{ marginTop: 18 }}>
+        <div className="section-head">
+          <h2>Zuletzt gemeinsam</h2>
+          <Link href="/historie" className="btn btn-ghost btn-icon" data-testid="link-history-overview">
+            <ChevronRight size={17} />
+          </Link>
+        </div>
+        <div className="timeline">
+          {recent.map((item) => (
+            <div className="timeline-item" key={item.id}>
+              <div className="timeline-title">{item.taskNameSnapshot}</div>
+              <div className="timeline-meta">
+                {item.personNameSnapshot} · {relativeDate(item.completedAt)}
+                {item.pointsSnapshot ? ` · +${item.pointsSnapshot} Punkte` : ""}
+              </div>
+            </div>
+          ))}
+          {recent.length === 0 && <div className="empty">Noch keine Einträge.</div>}
+        </div>
+      </section>
+
+      {activityOpen && (
+        <div className="modal-backdrop">
+          <form className="modal" onSubmit={submitActivity}>
+            <div className="modal-head">
+              <div>
+                <div className="eyebrow">Schnell notiert</div>
+                <h2 style={{ marginTop: 6 }}>Aktivität eintragen</h2>
+              </div>
+              <button type="button" className="btn btn-ghost btn-icon" onClick={() => setActivityOpen(false)} data-testid="button-close-activity">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="form-grid">
+              <div className="field full">
+                <label htmlFor="activity-name">Was habt ihr gemacht?</label>
+                <input
+                  id="activity-name"
+                  className="input"
+                  value={activity.name}
+                  onChange={(event) => setActivity({ ...activity, name: event.target.value })}
+                  placeholder="Zum Beispiel: Paket zur Post gebracht"
+                  data-testid="input-activity-name"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="activity-points">Punkte</label>
+                <input
+                  id="activity-points"
+                  type="number"
+                  min="1"
+                  className="input"
+                  value={activity.points}
+                  onChange={(event) => setActivity({ ...activity, points: event.target.value })}
+                  data-testid="input-activity-points"
+                />
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setActivityOpen(false)} data-testid="button-cancel-activity">
+                Abbrechen
+              </button>
+              <button className="btn btn-primary" data-testid="button-save-activity">
+                Speichern
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

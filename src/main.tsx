@@ -1,13 +1,14 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import App from "./App";
-import { StoreProvider } from "./store/store";
+import { ErrorBoundary } from "./components/error-boundary";
 import "./index.css";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <StoreProvider>
-      <App />
-    </StoreProvider>
-  </React.StrictMode>
+createRoot(document.getElementById("root")!, {
+  onCaughtError: (error, errorInfo) => {
+    console.error(error, errorInfo.componentStack);
+  }
+}).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
 );

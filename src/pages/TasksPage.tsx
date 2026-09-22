@@ -1,0 +1,151 @@
+import { useEffect, useState } from "react";
+import { Archive, Filter, Plus } from "lucide-react";
+import { TaskCard } from "../components/TaskCard";
+import { TaskModal } from "../components/TaskModal";
+import { isDue } from "../lib/utils";
+import { makeId } from "../store";
+import type { Store, Task } from "../types";
+
+type TaskFilter = "alle" | "offen" | "erledigt";
+
+export function TasksPage({
+  store,
+  update,
+  notify
+}: {
+  store: Store;
+  update: (patch: Partial<Store>) => void;
+  notify: (text: string) => void;
+}) {
+  const [modal, setModal] = useState<Task | "new" | null>(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<TaskFilter>("alle");
+  const active = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
+  const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!running) return undefined;
+    const interval = window.setInterval(() => setTick((tick) => tick + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, [running]);
+
+  const visible = store.tasks.filter((task) => {
+    const matchesSearch = task.name.toLowerCase().includes(search.toLowerCase());
+    const due = isDue(task, store.completions);
+    return matchesSearch && (filter === "alle" || (filter === "offen" && due) || (filter === "erledigt" && !due));
+  });
+
+  const save = (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => {
+    const now = new Date().toISOString();
+    if (modal && modal !== "new") {
+      const next = { ...modal, ...data, updatedAt: now };
+      update({
+        tasks: store.tasks.map((task) => (task.id === modal.id ? next : task)),
+        changes: [
+          { id: makeId("change"), taskId: modal.id, taskName: next.name, changedAt: now, personId: active.id, personName: active.name, before: modal.name, after: next.name },
+          ...store.changes
+        ]
+      });
+      notify("Aufgabe aktualisiert.");
+    } else {
+      update({ tasks: [...store.tasks, { ...data, id: makeId("task"), createdAt: now, updatedAt: now }] });
+      notify("Aufgabe angelegt.");
+    }
+    setModal(null);
+  };
+
+  const complete = (task: Task, seconds?: number) => {
+    const category = store.categories.find((item) => item.id === task.categoryId);
+    update({
+      completions: [
+        {
+          id: makeId("completion"),
+          taskId: task.id,
+          taskNameSnapshot: task.name,
+          personId: active.id,
+          personNameSnapshot: active.name,
+          categoryId: task.categoryId,
+          categoryNameSnapshot: category?.name || "",
+          pointsSnapshot: task.points,
+          completedAt: new Date().toISOString(),
+          ...(seconds ? { durationSeconds: seconds } : {})
+        },
+        ...store.completions
+      ]
+    });
+    setRunning(null);
+    notify("Erledigt.");
+  };
+
+  return (
+    <div className="content">
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">Euer Alltag, sortiert</div>
+          <h1>Aufgaben</h1>
+          <p className="subtitle">Alles, was euch beschäftigt – mit Raum für euren eigenen Rhythmus.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal("new")} data-testid="button-new-task">
+          <Plus size={16} />
+          Neue Aufgabe
+        </button>
+      </div>
+      <div className="toolbar">
+        <input
+          className="input search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Aufgaben durchsuchen"
+          data-testid="input-search-tasks"
+        />
+        <Filter size={16} color="hsl(var(--muted-foreground))" />
+        {(["alle", "offen", "erledigt"] as TaskFilter[]).map((value) => (
+          <button
+            key={value}
+            className={`filter-pill ${filter === value ? "active" : ""}`}
+            onClick={() => setFilter(value)}
+            data-testid={`button-filter-${value}`}
+          >
+            {value === "alle" ? "Alle" : value === "offen" ? "Offen" : "Erledigt"}
+          </button>
+        ))}
+      </div>
+      <section className="card card-pad">
+        <div className="section-head">
+          <h2>{filter === "erledigt" ? "Erledigte Aufgaben" : filter === "offen" ? "Was ansteht" : "Alle eure Aufgaben"}</h2>
+          <span className="tag">{visible.length} Einträge</span>
+        </div>
+        <div className="task-list">
+          {visible.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              category={store.categories.find((cat) => cat.id === task.categoryId)}
+              due={isDue(task, store.completions)}
+              onComplete={complete}
+              onEdit={(item) => setModal(item)}
+              running={running?.id === task.id ? running.started : null}
+              onStart={(item) => {
+                if (running?.id === item.id && running) complete(item, Math.round((Date.now() - running.started) / 1000));
+                else setRunning({ id: item.id, started: Date.now() });
+              }}
+            />
+          ))}
+          {visible.length === 0 && (
+            <div className="empty">
+              <div className="empty-icon">
+                <Archive size={21} />
+              </div>
+              <strong>Nichts gefunden.</strong>
+              <p style={{ marginTop: 6 }}>Versucht einen anderen Filter oder legt eine neue Aufgabe an.</p>
+            </div>
+          )}
+        </div>
+      </section>
+      {modal && (
+        <TaskModal task={modal === "new" ? undefined : modal} categories={store.categories} onClose={() => setModal(null)} onSave={save} />
+      )}
+    </div>
+  );
+}
