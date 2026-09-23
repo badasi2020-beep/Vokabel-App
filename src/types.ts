@@ -68,4 +68,5 @@ export interface Store {
   activities: Activity[];
   changes: TaskChange[];
   activePersonId: string;
+  weeklyPrize: string;
 }

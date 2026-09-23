@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Pencil, Plus, Tag, Trash2, Users } from "lucide-react";
+import { Pencil, Plus, Tag, Trash2, Trophy, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { TaskModal } from "../components/TaskModal";
 import { makeId } from "../store";
@@ -53,7 +53,7 @@ export function SettingsPage({
         <div>
           <div className="eyebrow">Euer gemeinsamer Raum</div>
           <h1>Einstellungen</h1>
-          <p className="subtitle">Macht Gemeinsam zu eurem Ort – mit euren Namen, euren Bereichen und eurem Rhythmus.</p>
+          <p className="subtitle">Macht Hausblick zu eurem Ort – mit euren Namen, euren Bereichen und eurem Rhythmus.</p>
         </div>
       </div>
 
@@ -84,6 +84,32 @@ export function SettingsPage({
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="card settings-section">
+        <div className="section-head">
+          <div>
+            <div className="section-label">Für alle, wenn die Woche geschafft ist</div>
+            <h2 style={{ marginTop: 5 }}>Preis der Woche</h2>
+          </div>
+          <Trophy size={18} />
+        </div>
+        <div className="field">
+          <label htmlFor="weekly-prize">Was gibt es, wenn alle Wochenaufgaben erledigt sind?</label>
+          <input
+            id="weekly-prize"
+            className="input"
+            value={store.weeklyPrize}
+            onChange={(event) => update({ weeklyPrize: event.target.value })}
+            onBlur={() => notify("Preis gespeichert.")}
+            placeholder="z. B. Kochabend nach Wahl der Person mit den meisten Punkten"
+            data-testid="input-weekly-prize"
+          />
+        </div>
+        <p className="stat-note" style={{ marginTop: 10 }}>
+          Wird auf der Statistik-Seite bei „Diese Woche" angezeigt, sobald keine Wochenaufgabe mehr offen ist. Die
+          Person mit den meisten Punkten der Woche wird dort zusätzlich hervorgehoben.
+        </p>
       </section>
 
       <section className="card settings-section">

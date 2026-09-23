@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { BarChart3, Tag, Users } from "lucide-react";
+import { BarChart3, PartyPopper, Tag, Trophy, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
+import { isDue } from "../lib/utils";
 import type { Store } from "../types";
 
 type Range = "woche" | "monat" | "jahr";
@@ -34,13 +35,16 @@ export function StatsPage({ store }: { store: Store }) {
   }));
   const max = Math.max(...dayCounts.map((item) => item.count), 1);
 
+  const openTaskCount = store.tasks.filter((task) => isDue(task, store.completions)).length;
+  const topScore = Math.max(0, ...byPerson.map((person) => person.points));
+  const leaders = topScore > 0 ? byPerson.filter((person) => person.points === topScore) : [];
+  const leader = leaders.length === 1 ? leaders[0] : null;
+
   return (
     <div className="content">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">Der Überblick ohne Wettbewerb</div>
           <h1>Statistik</h1>
-          <p className="subtitle">Zahlen, die euch Orientierung geben – nicht sagen, wer mehr gemacht hat.</p>
         </div>
       </div>
       <div className="toolbar">
@@ -56,6 +60,25 @@ export function StatsPage({ store }: { store: Store }) {
           </button>
         ))}
       </div>
+      {range === "woche" && store.weeklyPrize.trim() && (
+        <section className="card card-pad" style={{ marginBottom: 18 }}>
+          <div className="section-head">
+            <div>
+              <div className="section-label">Preis der Woche</div>
+              <h2 style={{ marginTop: 5 }}>{store.weeklyPrize}</h2>
+            </div>
+            {openTaskCount === 0 ? <PartyPopper size={20} color="hsl(var(--primary))" /> : <Trophy size={20} color="hsl(var(--muted-foreground))" />}
+          </div>
+          {openTaskCount === 0 ? (
+            <p className="stat-note">🎉 Alle Wochenaufgaben sind erledigt – der Preis ist verdient!</p>
+          ) : (
+            <p className="stat-note">
+              Noch {openTaskCount} {openTaskCount === 1 ? "Wochenaufgabe" : "Wochenaufgaben"} offen, bis der Preis sicher ist.
+            </p>
+          )}
+          {leader && <p className="stat-note" style={{ marginTop: 6 }}>🏆 Extra für {leader.name} – aktuell die meisten Punkte diese Woche.</p>}
+        </section>
+      )}
       <div className="grid grid-three">
         <div className="card stat-tile">
           <div className="section-label">Erledigt</div>
@@ -108,7 +131,10 @@ export function StatsPage({ store }: { store: Store }) {
                     {person.initial}
                   </span>
                   <div>
-                    <strong>{person.name}</strong>
+                    <strong>
+                      {person.name}
+                      {range === "woche" && leader?.id === person.id ? " 🏆" : ""}
+                    </strong>
                     <div className="stat-note">{person.count} Abschlüsse</div>
                   </div>
                 </div>

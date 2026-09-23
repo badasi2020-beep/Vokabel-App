@@ -26,7 +26,8 @@ const seed: Store = {
   completions: [],
   activities: [],
   changes: [],
-  activePersonId: "p1"
+  activePersonId: "p1",
+  weeklyPrize: ""
 };
 
 export function makeId(prefix: string): string {
