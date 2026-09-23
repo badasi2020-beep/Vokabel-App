@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BarChart3, BookOpen, Home, ListChecks, Settings, Users } from "lucide-react";
+import { BarChart3, BookOpen, Home, ListChecks, Settings } from "lucide-react";
+import { BrandMark } from "./BrandMark";
 import type { Store } from "../types";
 
 const links = [
@@ -17,15 +18,17 @@ const links = [
 export function Layout({ children, store, onPerson }: { children: ReactNode; store: Store; onPerson: (id: string) => void }) {
   const [location] = useLocation();
   const currentLabel = links.find((link) => link.href === location)?.label;
+  const activePerson = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
+  const shellStyle = { "--active-accent": activePerson?.color } as CSSProperties;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={shellStyle}>
       <aside className="sidebar">
         <Link href="/" className="brand" data-testid="link-brand">
           <span className="brand-mark">
-            <Users size={19} />
+            <BrandMark size={22} />
           </span>
-          <span className="brand-name">Gemeinsam</span>
+          <span className="brand-name">Hausblick</span>
         </Link>
         <nav className="nav">
           {links.map(({ href, label, icon: Icon }) => (
@@ -40,15 +43,11 @@ export function Layout({ children, store, onPerson }: { children: ReactNode; sto
             </Link>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          Ein Ort für alles,
-          <br />
-          was ihr zusammen tragt.
-        </div>
+        <div className="sidebar-footer">Organisations-App für Ihr Zuhause</div>
       </aside>
       <main className="main">
         <header className="topbar">
-          <span className="topbar-kicker">{location === "/" ? "Euer Zuhause im Blick" : currentLabel || "Gemeinsam"}</span>
+          <span className="topbar-kicker">{location === "/" ? "Euer Zuhause im Blick" : currentLabel || "Hausblick"}</span>
           <div className="topbar-actions">
             <div className="person-switcher" aria-label="Aktive Person">
               {store.people.map((person) => (

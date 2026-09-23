@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Archive, Filter, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Archive, ArrowLeft, ChevronRight, Filter, Plus } from "lucide-react";
+import { CategoryIcon } from "../components/CategoryIcon";
 import { TaskCard } from "../components/TaskCard";
 import { TaskModal } from "../components/TaskModal";
 import { isDue } from "../lib/utils";
@@ -17,6 +18,7 @@ export function TasksPage({
   update: (patch: Partial<Store>) => void;
   notify: (text: string) => void;
 }) {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [modal, setModal] = useState<Task | "new" | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("alle");
@@ -30,11 +32,30 @@ export function TasksPage({
     return () => window.clearInterval(interval);
   }, [running]);
 
+  const categoryStats = useMemo(
+    () =>
+      store.categories.map((category) => {
+        const tasks = store.tasks.filter((task) => task.categoryId === category.id);
+        const open = tasks.filter((task) => isDue(task, store.completions)).length;
+        return { category, total: tasks.length, open };
+      }),
+    [store.categories, store.tasks, store.completions]
+  );
+
+  const selectedCategory = store.categories.find((cat) => cat.id === selectedCategoryId) || null;
+
   const visible = store.tasks.filter((task) => {
+    if (selectedCategoryId && task.categoryId !== selectedCategoryId) return false;
     const matchesSearch = task.name.toLowerCase().includes(search.toLowerCase());
     const due = isDue(task, store.completions);
     return matchesSearch && (filter === "alle" || (filter === "offen" && due) || (filter === "erledigt" && !due));
   });
+
+  const openCategoryDetail = (categoryId: string) => {
+    setSelectedCategoryId(categoryId);
+    setSearch("");
+    setFilter("alle");
+  };
 
   const save = (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => {
     const now = new Date().toISOString();
@@ -78,15 +99,69 @@ export function TasksPage({
     notify("Erledigt.");
   };
 
+  if (!selectedCategory) {
+    return (
+      <div className="content">
+        <div className="page-heading">
+          <div>
+            <div className="eyebrow">Euer Alltag, sortiert</div>
+            <h1>Aufgaben</h1>
+            <p className="subtitle">Wählt einen Bereich, um die dazugehörigen Aufgaben zu sehen.</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setModal("new")} data-testid="button-new-task">
+            <Plus size={16} />
+            Neue Aufgabe
+          </button>
+        </div>
+        <section className="card card-pad">
+          <div className="task-list">
+            {categoryStats.map(({ category, total, open }) => (
+              <button
+                key={category.id}
+                className="task-row category-row"
+                onClick={() => openCategoryDetail(category.id)}
+                data-testid={`button-category-${category.id}`}
+              >
+                <span className="icon-btn" style={{ background: "hsl(var(--secondary))", color: "hsl(var(--secondary-foreground))" }}>
+                  <CategoryIcon name={category.icon} />
+                </span>
+                <div className="task-main">
+                  <div className="task-name">{category.name}</div>
+                  <div className="task-detail">
+                    {total} {total === 1 ? "Aufgabe" : "Aufgaben"}
+                    {open > 0 ? ` · ${open} offen` : ""}
+                  </div>
+                </div>
+                <ChevronRight size={18} color="hsl(var(--muted-foreground))" />
+              </button>
+            ))}
+            {categoryStats.length === 0 && (
+              <div className="empty">
+                <strong>Noch keine Kategorien.</strong>
+                <p style={{ marginTop: 6 }}>Lege welche in den Einstellungen an.</p>
+              </div>
+            )}
+          </div>
+        </section>
+        {modal && (
+          <TaskModal task={modal === "new" ? undefined : modal} categories={store.categories} onClose={() => setModal(null)} onSave={save} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="content">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">Euer Alltag, sortiert</div>
-          <h1>Aufgaben</h1>
-          <p className="subtitle">Alles, was euch beschäftigt – mit Raum für euren eigenen Rhythmus.</p>
+          <button className="btn btn-ghost" onClick={() => setSelectedCategoryId(null)} data-testid="button-back-to-categories" style={{ paddingLeft: 0, marginBottom: 8 }}>
+            <ArrowLeft size={15} />
+            Alle Kategorien
+          </button>
+          <div className="eyebrow">Kategorie</div>
+          <h1>{selectedCategory.name}</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal("new")} data-testid="button-new-task">
+        <button className="btn btn-primary" onClick={() => setModal("new")} data-testid="button-new-task-in-category">
           <Plus size={16} />
           Neue Aufgabe
         </button>
@@ -113,7 +188,7 @@ export function TasksPage({
       </div>
       <section className="card card-pad">
         <div className="section-head">
-          <h2>{filter === "erledigt" ? "Erledigte Aufgaben" : filter === "offen" ? "Was ansteht" : "Alle eure Aufgaben"}</h2>
+          <h2>{filter === "erledigt" ? "Erledigte Aufgaben" : filter === "offen" ? "Was ansteht" : selectedCategory.name}</h2>
           <span className="tag">{visible.length} Einträge</span>
         </div>
         <div className="task-list">
@@ -144,7 +219,13 @@ export function TasksPage({
         </div>
       </section>
       {modal && (
-        <TaskModal task={modal === "new" ? undefined : modal} categories={store.categories} onClose={() => setModal(null)} onSave={save} />
+        <TaskModal
+          task={modal === "new" ? undefined : modal}
+          categories={store.categories}
+          defaultCategoryId={selectedCategory.id}
+          onClose={() => setModal(null)}
+          onSave={save}
+        />
       )}
     </div>
   );

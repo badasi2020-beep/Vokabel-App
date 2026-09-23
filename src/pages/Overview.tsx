@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "wouter";
 import { ChevronRight, Plus, X } from "lucide-react";
 import { TaskCard } from "../components/TaskCard";
-import { isDue, relativeDate } from "../lib/utils";
+import { isDue } from "../lib/utils";
 import { makeId } from "../store";
 import type { Store, Task } from "../types";
 
@@ -35,19 +35,6 @@ export function Overview({
   const weekPoints =
     weekCompletions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) +
     store.activities.filter((item) => new Date(item.createdAt) >= weekStart).reduce((sum, item) => sum + item.points, 0);
-
-  const recent = [
-    ...store.completions,
-    ...store.activities.map((item) => ({
-      ...item,
-      taskNameSnapshot: item.name,
-      personNameSnapshot: store.people.find((person) => person.id === item.personId)?.name || "",
-      pointsSnapshot: item.points,
-      completedAt: item.createdAt
-    }))
-  ]
-    .sort((a, b) => b.completedAt.localeCompare(a.completedAt))
-    .slice(0, 4);
 
   const complete = (task: Task, seconds?: number) => {
     const category = store.categories.find((item) => item.id === task.categoryId);
@@ -151,27 +138,6 @@ export function Overview({
               <strong>Gerade nichts Fälliges.</strong>
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="card card-pad" style={{ marginTop: 18 }}>
-        <div className="section-head">
-          <h2>Zuletzt gemeinsam</h2>
-          <Link href="/historie" className="btn btn-ghost btn-icon" data-testid="link-history-overview">
-            <ChevronRight size={17} />
-          </Link>
-        </div>
-        <div className="timeline">
-          {recent.map((item) => (
-            <div className="timeline-item" key={item.id}>
-              <div className="timeline-title">{item.taskNameSnapshot}</div>
-              <div className="timeline-meta">
-                {item.personNameSnapshot} · {relativeDate(item.completedAt)}
-                {item.pointsSnapshot ? ` · +${item.pointsSnapshot} Punkte` : ""}
-              </div>
-            </div>
-          ))}
-          {recent.length === 0 && <div className="empty">Noch keine Einträge.</div>}
         </div>
       </section>
 

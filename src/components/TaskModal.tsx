@@ -5,17 +5,19 @@ import type { Category, Task } from "../types";
 export function TaskModal({
   task,
   categories,
+  defaultCategoryId,
   onSave,
   onClose
 }: {
   task?: Task;
   categories: Category[];
+  defaultCategoryId?: string;
   onSave: (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({
     name: task?.name || "",
-    categoryId: task?.categoryId || categories[0]?.id || "",
+    categoryId: task?.categoryId || defaultCategoryId || categories[0]?.id || "",
     room: task?.room || "",
     description: task?.description || "",
     points: task?.points?.toString() || "",

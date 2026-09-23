@@ -4,11 +4,12 @@ import type { Store } from "./types";
 const STORAGE_KEY = "gemeinsam-v1";
 
 // Mara und Jonas sind die Beispielpersonen aus dem ursprünglichen Replit-Stand;
-// in den Einstellungen jederzeit umbenennbar.
+// in den Einstellungen jederzeit umbenennbar. Lila/Grün wie auf dem Logo -
+// jede Person bekommt so ihre eigene, die Oberfläche dezent einfärbende Akzentfarbe.
 const seed: Store = {
   people: [
-    { id: "p1", name: "Mara", initial: "M", color: "#d5755e" },
-    { id: "p2", name: "Jonas", initial: "J", color: "#4c8a7a" }
+    { id: "p1", name: "Mara", initial: "M", color: "#9A64B9" },
+    { id: "p2", name: "Jonas", initial: "J", color: "#679442" }
   ],
   categories: [
     { id: "c1", name: "Küche", icon: "Utensils" },

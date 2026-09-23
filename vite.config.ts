@@ -16,9 +16,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {
-        name: "Gemeinsam",
-        short_name: "Gemeinsam",
-        description: "Was wurde im Haushalt wirklich gemacht – gemeinsam sichtbar.",
+        name: "Hausblick",
+        short_name: "Hausblick",
+        description: "Organisations-App für Ihr Zuhause – sichtbar machen, was wirklich erledigt wurde.",
         theme_color: "#F5F1E7",
         background_color: "#F5F1E7",
         display: "standalone",
