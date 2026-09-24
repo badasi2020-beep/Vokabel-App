@@ -3,6 +3,8 @@ export interface Person {
   name: string;
   initial: string;
   color: string;
+  // Preis, den diese Person gewinnen kann - wird von der jeweils anderen Person festgelegt.
+  prize: string;
 }
 
 export interface Category {
@@ -68,5 +70,4 @@ export interface Store {
   activities: Activity[];
   changes: TaskChange[];
   activePersonId: string;
-  weeklyPrize: string;
 }

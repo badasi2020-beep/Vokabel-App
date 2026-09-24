@@ -154,6 +154,29 @@ h3 { font-size: 17px; letter-spacing: -.02em; }
 .summary-figure strong { font-family: var(--app-font-serif); font-size: 26px; letter-spacing: -.03em; margin-right: 6px; }
 .summary-figure span { color: hsl(var(--muted-foreground)); font-size: 13px; }
 
+/* Preis der Woche - bewusst zurückhaltend, ganz unten auf der Statistik-Seite */
+.prize-footer { margin-top: 32px; padding-top: 18px; border-top: 1px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 13px; }
+.prize-footer p { margin-top: 4px; }
+.prize-footer p:first-child { margin-top: 0; }
+.prize-footer .prize-win { color: hsl(var(--primary)); font-weight: 700; font-size: 14px; }
+
+.fireworks { position: relative; height: 64px; margin-bottom: 6px; overflow: hidden; }
+.fireworks-spark {
+  position: absolute;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform-origin: center bottom;
+  animation: spark-fly 1000ms ease-out forwards;
+  opacity: 0;
+}
+@keyframes spark-fly {
+  0% { opacity: 1; transform: rotate(var(--angle)) translateY(0); }
+  65% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--angle)) translateY(-52px); }
+}
+
 @media (max-width: 850px) {
   .sidebar { width: 78px; flex-basis: 78px; padding: 22px 10px; align-items: center; }
   .brand { padding: 0 0 28px; }

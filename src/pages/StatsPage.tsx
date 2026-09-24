@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { BarChart3, PartyPopper, Tag, Trophy, Users } from "lucide-react";
+import { BarChart3, Tag, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
+import { Fireworks } from "../components/Fireworks";
 import { isDue } from "../lib/utils";
 import type { Store } from "../types";
 
@@ -39,6 +40,7 @@ export function StatsPage({ store }: { store: Store }) {
   const topScore = Math.max(0, ...byPerson.map((person) => person.points));
   const leaders = topScore > 0 ? byPerson.filter((person) => person.points === topScore) : [];
   const leader = leaders.length === 1 ? leaders[0] : null;
+  const hasWon = range === "woche" && openTaskCount === 0 && !!leader;
 
   return (
     <div className="content">
@@ -60,25 +62,6 @@ export function StatsPage({ store }: { store: Store }) {
           </button>
         ))}
       </div>
-      {range === "woche" && store.weeklyPrize.trim() && (
-        <section className="card card-pad" style={{ marginBottom: 18 }}>
-          <div className="section-head">
-            <div>
-              <div className="section-label">Preis der Woche</div>
-              <h2 style={{ marginTop: 5 }}>{store.weeklyPrize}</h2>
-            </div>
-            {openTaskCount === 0 ? <PartyPopper size={20} color="hsl(var(--primary))" /> : <Trophy size={20} color="hsl(var(--muted-foreground))" />}
-          </div>
-          {openTaskCount === 0 ? (
-            <p className="stat-note">🎉 Alle Wochenaufgaben sind erledigt – der Preis ist verdient!</p>
-          ) : (
-            <p className="stat-note">
-              Noch {openTaskCount} {openTaskCount === 1 ? "Wochenaufgabe" : "Wochenaufgaben"} offen, bis der Preis sicher ist.
-            </p>
-          )}
-          {leader && <p className="stat-note" style={{ marginTop: 6 }}>🏆 Extra für {leader.name} – aktuell die meisten Punkte diese Woche.</p>}
-        </section>
-      )}
       <div className="grid grid-three">
         <div className="card stat-tile">
           <div className="section-label">Erledigt</div>
@@ -168,6 +151,27 @@ export function StatsPage({ store }: { store: Store }) {
           {byCategory.length === 0 && <div className="empty">Noch keine Kategorien in diesem Zeitraum.</div>}
         </div>
       </section>
+
+      {range === "woche" && store.people.some((p) => p.prize.trim()) && (
+        <div className="prize-footer">
+          {hasWon && <Fireworks />}
+          {store.people.map((person) => {
+            const won = hasWon && leader?.id === person.id;
+            if (!person.prize.trim()) return null;
+            return (
+              <p key={person.id} className={won ? "prize-win" : undefined}>
+                {won ? "🎆 " : ""}Preis für {person.name}: {person.prize}
+                {won ? " – gewonnen!" : ""}
+              </p>
+            );
+          })}
+          {!hasWon && openTaskCount > 0 && (
+            <p>
+              Noch {openTaskCount} {openTaskCount === 1 ? "Wochenaufgabe" : "Wochenaufgaben"} offen, bis feststeht, wer gewinnt.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

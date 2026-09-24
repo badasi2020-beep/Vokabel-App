@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Pencil, Plus, Tag, Trash2, Trophy, Users } from "lucide-react";
+import { Pencil, Plus, Tag, Trash2, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { TaskModal } from "../components/TaskModal";
 import { makeId } from "../store";
@@ -24,6 +24,11 @@ export function SettingsPage({
   const updatePerson = (person: Store["people"][number], name: string) =>
     update({
       people: store.people.map((item) => (item.id === person.id ? { ...item, name, initial: name.charAt(0).toUpperCase() || person.initial } : item))
+    });
+
+  const updatePersonPrize = (person: Store["people"][number], prize: string) =>
+    update({
+      people: store.people.map((item) => (item.id === person.id ? { ...item, prize } : item))
     });
 
   const addCategory = (event: FormEvent) => {
@@ -66,49 +71,45 @@ export function SettingsPage({
           <Users size={18} />
         </div>
         <div className="settings-list">
-          {store.people.map((person) => (
-            <div className="settings-item" key={person.id}>
-              <div className="person-edit">
-                <span className="avatar" style={{ background: person.color }}>
-                  {person.initial}
-                </span>
-                <input
-                  className="input"
-                  value={person.name}
-                  onChange={(event) => updatePerson(person, event.target.value)}
-                  onBlur={() => notify("Name gespeichert.")}
-                  data-testid={`input-person-${person.id}`}
-                />
+          {store.people.map((person) => {
+            const others = store.people.filter((p) => p.id !== person.id);
+            const othersLabel = others.length === 1 ? others[0].name : "die andere Person";
+            return (
+              <div className="settings-item" key={person.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div className="person-edit">
+                    <span className="avatar" style={{ background: person.color }}>
+                      {person.initial}
+                    </span>
+                    <input
+                      className="input"
+                      value={person.name}
+                      onChange={(event) => updatePerson(person, event.target.value)}
+                      onBlur={() => notify("Name gespeichert.")}
+                      data-testid={`input-person-${person.id}`}
+                    />
+                  </div>
+                  <span className="tag">{person.id === active.id ? "aktiv" : "Person"}</span>
+                </div>
+                <div className="field" style={{ paddingLeft: 41 }}>
+                  <label htmlFor={`prize-${person.id}`}>Preis für {person.name} (von {othersLabel} eingetragen)</label>
+                  <input
+                    id={`prize-${person.id}`}
+                    className="input"
+                    value={person.prize ?? ""}
+                    onChange={(event) => updatePersonPrize(person, event.target.value)}
+                    onBlur={() => notify("Preis gespeichert.")}
+                    placeholder="z. B. Frühstück ans Bett"
+                    data-testid={`input-prize-${person.id}`}
+                  />
+                </div>
               </div>
-              <span className="tag">{person.id === active.id ? "aktiv" : "Person"}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </section>
-
-      <section className="card settings-section">
-        <div className="section-head">
-          <div>
-            <div className="section-label">Für alle, wenn die Woche geschafft ist</div>
-            <h2 style={{ marginTop: 5 }}>Preis der Woche</h2>
-          </div>
-          <Trophy size={18} />
-        </div>
-        <div className="field">
-          <label htmlFor="weekly-prize">Was gibt es, wenn alle Wochenaufgaben erledigt sind?</label>
-          <input
-            id="weekly-prize"
-            className="input"
-            value={store.weeklyPrize}
-            onChange={(event) => update({ weeklyPrize: event.target.value })}
-            onBlur={() => notify("Preis gespeichert.")}
-            placeholder="z. B. Kochabend nach Wahl der Person mit den meisten Punkten"
-            data-testid="input-weekly-prize"
-          />
-        </div>
-        <p className="stat-note" style={{ marginTop: 10 }}>
-          Wird auf der Statistik-Seite bei „Diese Woche" angezeigt, sobald keine Wochenaufgabe mehr offen ist. Die
-          Person mit den meisten Punkten der Woche wird dort zusätzlich hervorgehoben.
+        <p className="stat-note" style={{ marginTop: 12 }}>
+          Wird auf der Statistik-Seite unter „Diese Woche" gezeigt, sobald keine Wochenaufgabe mehr offen ist und die
+          Person mit den meisten Punkten feststeht.
         </p>
       </section>
 

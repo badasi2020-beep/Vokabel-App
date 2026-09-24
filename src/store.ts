@@ -8,8 +8,8 @@ const STORAGE_KEY = "gemeinsam-v1";
 // jede Person bekommt so ihre eigene, die Oberfläche dezent einfärbende Akzentfarbe.
 const seed: Store = {
   people: [
-    { id: "p1", name: "Mara", initial: "M", color: "#9A64B9" },
-    { id: "p2", name: "Jonas", initial: "J", color: "#679442" }
+    { id: "p1", name: "Mara", initial: "M", color: "#9A64B9", prize: "" },
+    { id: "p2", name: "Jonas", initial: "J", color: "#679442", prize: "" }
   ],
   categories: [
     { id: "c1", name: "Küche", icon: "Utensils" },
@@ -26,8 +26,7 @@ const seed: Store = {
   completions: [],
   activities: [],
   changes: [],
-  activePersonId: "p1",
-  weeklyPrize: ""
+  activePersonId: "p1"
 };
 
 export function makeId(prefix: string): string {
