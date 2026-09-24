@@ -2,8 +2,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "wouter";
 import { ChevronRight, Plus, X } from "lucide-react";
 import { TaskCard } from "../components/TaskCard";
-import { isDue } from "../lib/utils";
-import { makeId } from "../store";
+import { CompletePersonDialog } from "../components/CompletePersonDialog";
+import { isDue, visibleForPerson } from "../lib/utils";
+import { buildCompletion } from "../lib/completion";
+import { COMMUNITY_ID, makeId } from "../store";
 import type { Store, Task } from "../types";
 
 export function Overview({
@@ -18,6 +20,7 @@ export function Overview({
   const [activityOpen, setActivityOpen] = useState(false);
   const [activity, setActivity] = useState({ name: "", points: "1" });
   const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
+  const [completingTask, setCompletingTask] = useState<Task | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -26,8 +29,13 @@ export function Overview({
     return () => window.clearInterval(interval);
   }, [running]);
 
-  const dueTasks = store.tasks.filter((task) => isDue(task, store.completions));
-  const active = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
+  const isCommunity = store.activePersonId === COMMUNITY_ID;
+  const active = store.people.find((person) => person.id === store.activePersonId);
+
+  const nonAlltag = store.tasks.filter((task) => task.taskKind !== "alltag");
+  const visibleTasks = isCommunity ? nonAlltag : nonAlltag.filter((task) => visibleForPerson(task, active!.id));
+  const dueTasks = visibleTasks.filter((task) => isDue(task, store.completions));
+
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   weekStart.setHours(0, 0, 0, 0);
@@ -36,28 +44,23 @@ export function Overview({
     weekCompletions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) +
     store.activities.filter((item) => new Date(item.createdAt) >= weekStart).reduce((sum, item) => sum + item.points, 0);
 
-  const complete = (task: Task, seconds?: number) => {
+  const complete = (task: Task, personId: string, seconds?: number) => {
+    const person = store.people.find((item) => item.id === personId);
+    if (!person) return;
     const category = store.categories.find((item) => item.id === task.categoryId);
-    const completion = {
-      id: makeId("completion"),
-      taskId: task.id,
-      taskNameSnapshot: task.name,
-      personId: active.id,
-      personNameSnapshot: active.name,
-      categoryId: task.categoryId,
-      categoryNameSnapshot: category?.name || "Sonstiges",
-      pointsSnapshot: task.points,
-      completedAt: new Date().toISOString(),
-      ...(seconds ? { durationSeconds: seconds } : {})
-    };
-    update({ completions: [completion, ...store.completions] });
+    const { completion, clearTempAssignment } = buildCompletion(task, person, category, seconds);
+    const tasks = clearTempAssignment
+      ? store.tasks.map((item) => (item.id === task.id ? { ...item, tempAssignedPersonId: null } : item))
+      : store.tasks;
+    update({ completions: [completion, ...store.completions], tasks });
     setRunning(null);
-    notify(`${task.name} ist erledigt. Danke, ${active.name}.`);
+    setCompletingTask(null);
+    notify(completion.takeoverFromPersonId ? `${task.name} übernommen. Danke, ${person.name}.` : `${task.name} ist erledigt. Danke, ${person.name}.`);
   };
 
   const submitActivity = (event: FormEvent) => {
     event.preventDefault();
-    if (!activity.name.trim()) return;
+    if (!activity.name.trim() || !active) return;
     update({
       activities: [
         {
@@ -81,12 +84,14 @@ export function Overview({
       <div className="page-heading">
         <div>
           <div className="eyebrow">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
-          <h1>Hallo, {active.name}.</h1>
+          <h1>{isCommunity ? "Eure Woche." : `Hallo, ${active?.name}.`}</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setActivityOpen(true)} data-testid="button-log-activity">
-          <Plus size={16} />
-          Aktivität eintragen
-        </button>
+        {!isCommunity && (
+          <button className="btn btn-primary" onClick={() => setActivityOpen(true)} data-testid="button-log-activity">
+            <Plus size={16} />
+            Aktivität eintragen
+          </button>
+        )}
       </div>
 
       <section className="card summary-strip" style={{ marginBottom: 18 }}>
@@ -108,7 +113,7 @@ export function Overview({
 
       <section className="card card-pad">
         <div className="section-head">
-          <h2>Was ansteht</h2>
+          <h2>{isCommunity ? "Alle Aufgaben" : "Was ansteht"}</h2>
           <Link href="/aufgaben" className="btn btn-ghost" data-testid="link-all-tasks">
             Alle Aufgaben <ChevronRight size={15} />
           </Link>
@@ -122,11 +127,13 @@ export function Overview({
                   key={task.id}
                   task={task}
                   category={store.categories.find((cat) => cat.id === task.categoryId)}
-                  onComplete={complete}
+                  people={isCommunity ? store.people : undefined}
+                  onComplete={(item) => active && complete(item, active.id)}
+                  onRequestComplete={isCommunity ? (item) => setCompletingTask(item) : undefined}
                   running={running?.id === task.id ? running.started : null}
                   onStart={(item) => {
-                    if (running?.id === item.id) {
-                      complete(item, Math.round((Date.now() - running.started) / 1000));
+                    if (running?.id === item.id && active) {
+                      complete(item, active.id, Math.round((Date.now() - running.started) / 1000));
                     } else {
                       setRunning({ id: item.id, started: Date.now() });
                     }
@@ -140,6 +147,15 @@ export function Overview({
           )}
         </div>
       </section>
+
+      {completingTask && (
+        <CompletePersonDialog
+          task={completingTask}
+          people={store.people}
+          onClose={() => setCompletingTask(null)}
+          onChoose={(personId) => complete(completingTask, personId)}
+        />
+      )}
 
       {activityOpen && (
         <div className="modal-backdrop">

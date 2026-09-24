@@ -1,29 +1,53 @@
-import { Check, Pencil, Timer } from "lucide-react";
-import type { Category, Task } from "../types";
+import { Check, Pencil, Timer, UserPlus } from "lucide-react";
+import { currentAssignee } from "../lib/utils";
+import type { Category, Person, Task } from "../types";
+
+const kindLabels: Record<Task["taskKind"], string> = {
+  alltag: "Alltag",
+  putzplan: "Putzplan",
+  sonstiges: "Nicht alltäglich"
+};
 
 export function TaskCard({
   task,
   category,
+  people,
   due = true,
   onComplete,
+  onRequestComplete,
   onEdit,
+  onAssign,
   running,
-  onStart
+  onStart,
+  showKind = false
 }: {
   task: Task;
   category?: Category;
+  people?: Person[];
   due?: boolean;
-  onComplete: (task: Task, seconds?: number) => void;
+  onComplete: (task: Task) => void;
+  onRequestComplete?: (task: Task) => void;
   onEdit?: (task: Task) => void;
+  onAssign?: (task: Task) => void;
   running?: number | null;
   onStart?: (task: Task) => void;
+  showKind?: boolean;
 }) {
+  const assigneeId = currentAssignee(task);
+  const assignee = people?.find((p) => p.id === assigneeId);
+  const isCommunity = !!onRequestComplete;
+
+  const handleCheck = () => {
+    if (isCommunity) onRequestComplete!(task);
+    else onComplete(task);
+  };
+
   return (
     <div className="task-row" data-testid={`card-task-${task.id}`}>
       <button
         className={`task-check ${!due ? "done" : ""}`}
         disabled={!due}
-        onClick={() => onComplete(task)}
+        onClick={handleCheck}
         data-testid={`button-complete-${task.id}`}
         title="Als erledigt markieren"
       >
@@ -35,10 +59,12 @@ export function TaskCard({
           <span className="category-dot" />
           {category?.name}
           {task.room ? ` · ${task.room}` : ""}
+          {showKind ? ` · ${kindLabels[task.taskKind]}` : ""}
+          {assignee ? ` · → ${assignee.name}` : people ? " · nicht zugewiesen" : ""}
           {!due && <span className="tag">erledigt</span>}
         </div>
       </div>
-      {task.timerEnabled && due && (
+      {task.timerEnabled && due && !isCommunity && (
         <button
           className="btn btn-ghost btn-icon"
           onClick={() => onStart?.(task)}
@@ -56,6 +82,11 @@ export function TaskCard({
         <span className="task-points">+{task.points}</span>
       ) : (
         <span className="task-points muted">ohne Punkte</span>
+      )}
+      {onAssign && (
+        <button className="btn btn-ghost btn-icon" onClick={() => onAssign(task)} data-testid={`button-assign-task-${task.id}`} title="Zuweisen">
+          <UserPlus size={16} />
+        </button>
       )}
       {onEdit && (
         <button className="btn btn-ghost btn-icon" onClick={() => onEdit(task)} data-testid={`button-edit-${task.id}`}>

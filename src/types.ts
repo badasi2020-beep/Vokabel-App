@@ -13,6 +13,11 @@ export interface Category {
   icon: string;
 }
 
+// alltag: taglicher Kram (z.B. Spülmaschine) - bleibt immer sichtbar, nur in Kategorien, nicht auf der Startseite.
+// putzplan: zählt für den persönlichen Wochenpreis der zugewiesenen Person.
+// sonstiges: alles andere ("nicht alltägliches").
+export type TaskKind = "alltag" | "putzplan" | "sonstiges";
+
 export interface Task {
   id: string;
   name: string;
@@ -22,6 +27,12 @@ export interface Task {
   points: number | null;
   repeatDays: number | null;
   timerEnabled: boolean;
+  taskKind: TaskKind;
+  // Dauerhafte Zuweisung. null = niemandem zugewiesen (für alle offen).
+  assignedPersonId: string | null;
+  // Zuweisung nur für die nächste Erledigung (bei Alltagsaufgaben: "nur dieses Mal").
+  // Wird nach der nächsten Erledigung wieder auf null zurückgesetzt.
+  tempAssignedPersonId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,9 +47,13 @@ export interface Completion {
   personNameSnapshot: string;
   categoryId: string;
   categoryNameSnapshot: string;
+  taskKindSnapshot: TaskKind;
   pointsSnapshot: number | null;
   completedAt: string;
   durationSeconds?: number;
+  // Gesetzt, wenn diese Erledigung eine Übernahme einer fremd zugewiesenen Aufgabe war -
+  // die ursprünglich zugewiesene Person verliert dadurch die gleiche Punktzahl.
+  takeoverFromPersonId?: string | null;
 }
 
 export interface Activity {

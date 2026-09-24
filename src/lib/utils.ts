@@ -19,9 +19,23 @@ export function dateTime(date: string): string {
 }
 
 export function isDue(task: Task, completions: Completion[]): boolean {
+  // Alltagsaufgaben bleiben immer aktionierbar - sie verschwinden nie, auch nicht nach dem Abhaken.
+  if (task.taskKind === "alltag") return true;
   if (!task.repeatDays) return true;
   const last = completions
     .filter((item) => item.taskId === task.id)
     .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
   return !last || Date.now() - new Date(last.completedAt).getTime() >= task.repeatDays * 86400000;
+}
+
+// Wer eine Aufgabe aktuell erledigen soll: die einmalige Zuweisung geht vor der dauerhaften.
+export function currentAssignee(task: Task): string | null {
+  return task.tempAssignedPersonId ?? task.assignedPersonId;
+}
+
+// Startseiten-Filter: Alltagsaufgaben nie, sonst nur eigene bzw. nicht zugewiesene Aufgaben.
+export function visibleForPerson(task: Task, personId: string): boolean {
+  if (task.taskKind === "alltag") return false;
+  const assignee = currentAssignee(task);
+  return assignee === null || assignee === personId;
 }

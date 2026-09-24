@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
-import type { Category, Task } from "../types";
+import type { Category, Task, TaskKind } from "../types";
+
+const kindOptions: { value: TaskKind; label: string }[] = [
+  { value: "alltag", label: "Alltagsaufgabe" },
+  { value: "putzplan", label: "Putzplan" },
+  { value: "sonstiges", label: "Nicht alltäglich" }
+];
 
 export function TaskModal({
   task,
@@ -22,7 +28,8 @@ export function TaskModal({
     description: task?.description || "",
     points: task?.points?.toString() || "",
     repeatDays: task?.repeatDays?.toString() || "",
-    timerEnabled: task?.timerEnabled || false
+    timerEnabled: task?.timerEnabled || false,
+    taskKind: task?.taskKind || ("sonstiges" as TaskKind)
   });
 
   const submit = (event: FormEvent) => {
@@ -35,7 +42,10 @@ export function TaskModal({
       description: form.description || undefined,
       points: form.points === "" ? null : Number(form.points),
       repeatDays: form.repeatDays === "" ? null : Number(form.repeatDays),
-      timerEnabled: form.timerEnabled
+      timerEnabled: form.timerEnabled,
+      taskKind: form.taskKind,
+      assignedPersonId: task?.assignedPersonId ?? null,
+      tempAssignedPersonId: task?.tempAssignedPersonId ?? null
     });
   };
 
@@ -63,6 +73,22 @@ export function TaskModal({
               placeholder="Zum Beispiel: Wohnzimmer saugen"
               data-testid="input-task-name"
             />
+          </div>
+          <div className="field full">
+            <label>Art der Aufgabe</label>
+            <div className="toolbar" style={{ margin: 0 }}>
+              {kindOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`filter-pill ${form.taskKind === option.value ? "active" : ""}`}
+                  onClick={() => setForm({ ...form, taskKind: option.value })}
+                  data-testid={`button-task-kind-${option.value}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="field">
             <label htmlFor="task-category">Kategorie</label>

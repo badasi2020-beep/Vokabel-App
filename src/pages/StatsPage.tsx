@@ -1,18 +1,23 @@
 import { useState } from "react";
-import { BarChart3, Tag, Users } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronUp, Tag, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { Fireworks } from "../components/Fireworks";
-import { isDue } from "../lib/utils";
+import { dateTime } from "../lib/utils";
+import { pointsForPerson, startOfWeek, wonOwnPutzplan } from "../lib/points";
 import type { Store } from "../types";
 
 type Range = "woche" | "monat" | "jahr";
 
 export function StatsPage({ store }: { store: Store }) {
   const [range, setRange] = useState<Range>("woche");
+  const [showAlltag, setShowAlltag] = useState(false);
   const since = new Date();
   since.setDate(since.getDate() - (range === "monat" ? 30 : range === "jahr" ? 365 : 7));
 
-  const completions = store.completions.filter((entry) => new Date(entry.completedAt) >= since);
+  const inRange = store.completions.filter((entry) => new Date(entry.completedAt) >= since);
+  const completions = inRange.filter((entry) => entry.taskKindSnapshot !== "alltag");
+  const alltagCompletions = inRange.filter((entry) => entry.taskKindSnapshot === "alltag");
+
   const points =
     completions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) +
     store.activities.filter((item) => new Date(item.createdAt) >= since).reduce((sum, item) => sum + item.points, 0);
@@ -21,7 +26,7 @@ export function StatsPage({ store }: { store: Store }) {
     .map((person) => ({
       ...person,
       count: completions.filter((item) => item.personId === person.id).length,
-      points: completions.filter((item) => item.personId === person.id).reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0)
+      points: pointsForPerson(person.id, store.completions, store.activities, since)
     }))
     .filter((person) => person.count || completions.length === 0);
 
@@ -36,11 +41,18 @@ export function StatsPage({ store }: { store: Store }) {
   }));
   const max = Math.max(...dayCounts.map((item) => item.count), 1);
 
-  const openTaskCount = store.tasks.filter((task) => isDue(task, store.completions)).length;
-  const topScore = Math.max(0, ...byPerson.map((person) => person.points));
-  const leaders = topScore > 0 ? byPerson.filter((person) => person.points === topScore) : [];
-  const leader = leaders.length === 1 ? leaders[0] : null;
-  const hasWon = range === "woche" && openTaskCount === 0 && !!leader;
+  const weekStart = startOfWeek();
+  const weekPointsByPerson = store.people.map((person) => ({
+    person,
+    weekPoints: pointsForPerson(person.id, store.completions, store.activities, weekStart),
+    wonPutzplan: wonOwnPutzplan(person.id, store.tasks, store.completions, weekStart)
+  }));
+  const anyWeekActivity = weekPointsByPerson.some((item) => item.weekPoints !== 0);
+  const topScore = Math.max(...weekPointsByPerson.map((item) => item.weekPoints));
+  const weekLeaders = anyWeekActivity ? weekPointsByPerson.filter((item) => item.weekPoints === topScore) : [];
+  const weekLeader = weekLeaders.length === 1 ? weekLeaders[0].person : null;
+  const anyPutzplanWin = range === "woche" && weekPointsByPerson.some((item) => item.wonPutzplan === true);
+  const showPrizeFooter = range === "woche" && (store.people.some((p) => p.prize.trim()) || !!weekLeader);
 
   return (
     <div className="content">
@@ -66,7 +78,7 @@ export function StatsPage({ store }: { store: Store }) {
         <div className="card stat-tile">
           <div className="section-label">Erledigt</div>
           <div className="stat-value">{completions.length}</div>
-          <div className="stat-note">Aufgaben in diesem Zeitraum</div>
+          <div className="stat-note">Putzplan &amp; Nicht alltägliches</div>
         </div>
         <div className="card stat-tile">
           <div className="section-label">Gemeinsame Punkte</div>
@@ -116,7 +128,7 @@ export function StatsPage({ store }: { store: Store }) {
                   <div>
                     <strong>
                       {person.name}
-                      {range === "woche" && leader?.id === person.id ? " 🏆" : ""}
+                      {range === "woche" && weekLeader?.id === person.id ? " 🏆" : ""}
                     </strong>
                     <div className="stat-note">{person.count} Abschlüsse</div>
                   </div>
@@ -152,24 +164,60 @@ export function StatsPage({ store }: { store: Store }) {
         </div>
       </section>
 
-      {range === "woche" && store.people.some((p) => p.prize.trim()) && (
+      <section className="card card-pad" style={{ marginTop: 18 }}>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ paddingLeft: 0 }}
+          onClick={() => setShowAlltag((v) => !v)}
+          data-testid="button-toggle-alltag"
+        >
+          {showAlltag ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          Alltagsaufgaben {showAlltag ? "ausblenden" : "anzeigen"} ({alltagCompletions.length})
+        </button>
+        {showAlltag && (
+          <div className="timeline" style={{ marginTop: 14 }}>
+            {alltagCompletions.map((entry) => (
+              <div className="timeline-item" key={entry.id}>
+                <div className="timeline-title">{entry.taskNameSnapshot}</div>
+                <div className="timeline-meta">
+                  {entry.personNameSnapshot} · {dateTime(entry.completedAt)}
+                  {entry.pointsSnapshot ? ` · +${entry.pointsSnapshot} Punkte` : ""}
+                </div>
+              </div>
+            ))}
+            {alltagCompletions.length === 0 && <div className="empty">Noch keine Alltagsaufgaben in diesem Zeitraum.</div>}
+          </div>
+        )}
+      </section>
+
+      {showPrizeFooter && (
         <div className="prize-footer">
-          {hasWon && <Fireworks />}
-          {store.people.map((person) => {
-            const won = hasWon && leader?.id === person.id;
-            if (!person.prize.trim()) return null;
+          {anyPutzplanWin && <Fireworks />}
+          {store.people.map(({ prize, id, name }) => {
+            if (!prize.trim()) return null;
+            const won = weekPointsByPerson.find((item) => item.person.id === id)?.wonPutzplan;
+            if (won === true) {
+              return (
+                <p key={id} className="prize-win">
+                  🎆 Preis für {name}: {prize} – Putzplan geschafft!
+                </p>
+              );
+            }
+            if (won === false) {
+              return (
+                <p key={id}>
+                  Preis für {name}: {prize} (Putzplan diese Woche noch nicht komplett)
+                </p>
+              );
+            }
             return (
-              <p key={person.id} className={won ? "prize-win" : undefined}>
-                {won ? "🎆 " : ""}Preis für {person.name}: {person.prize}
-                {won ? " – gewonnen!" : ""}
+              <p key={id}>
+                Preis für {name}: {prize}
               </p>
             );
           })}
-          {!hasWon && openTaskCount > 0 && (
-            <p>
-              Noch {openTaskCount} {openTaskCount === 1 ? "Wochenaufgabe" : "Wochenaufgaben"} offen, bis feststeht, wer gewinnt.
-            </p>
-          )}
+          {weekLeader && <p>🏆 Extra-Preis diese Woche: {weekLeader.name} liegt bei den Punkten vorn.</p>}
         </div>
       )}
     </div>

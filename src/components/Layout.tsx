@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { BarChart3, BookOpen, Home, ListChecks, Settings } from "lucide-react";
+import { BarChart3, BookOpen, Home, ListChecks, Settings, Users } from "lucide-react";
 import { BrandMark } from "./BrandMark";
+import { COMMUNITY_ID } from "../store";
 import type { Store } from "../types";
 
 const links = [
@@ -18,8 +19,8 @@ const links = [
 export function Layout({ children, store, onPerson }: { children: ReactNode; store: Store; onPerson: (id: string) => void }) {
   const [location] = useLocation();
   const currentLabel = links.find((link) => link.href === location)?.label;
-  const activePerson = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
-  const shellStyle = { "--active-accent": activePerson?.color } as CSSProperties;
+  const activePerson = store.people.find((person) => person.id === store.activePersonId);
+  const shellStyle = (activePerson ? { "--active-accent": activePerson.color } : {}) as CSSProperties;
 
   return (
     <div className="app-shell" style={shellStyle}>
@@ -62,6 +63,15 @@ export function Layout({ children, store, onPerson }: { children: ReactNode; sto
                   {person.initial}
                 </button>
               ))}
+              <button
+                className={`avatar ${store.activePersonId === COMMUNITY_ID ? "selected" : ""}`}
+                style={{ background: "hsl(var(--muted-foreground))" }}
+                onClick={() => onPerson(COMMUNITY_ID)}
+                data-testid="button-person-gemeinschaft"
+                title="Gemeinschaft: alle Aufgaben"
+              >
+                <Users size={14} />
+              </button>
             </div>
             <Link href="/einstellungen" className="btn btn-ghost btn-icon" data-testid="link-settings-topbar" title="Einstellungen">
               <Settings size={18} />

@@ -3,8 +3,11 @@ import { Archive, ArrowLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { TaskCard } from "../components/TaskCard";
 import { TaskModal } from "../components/TaskModal";
+import { AssignTaskDialog } from "../components/AssignTaskDialog";
+import { CompletePersonDialog } from "../components/CompletePersonDialog";
 import { isDue } from "../lib/utils";
-import { makeId } from "../store";
+import { buildCompletion } from "../lib/completion";
+import { COMMUNITY_ID, makeId } from "../store";
 import type { Store, Task } from "../types";
 
 type TaskFilter = "alle" | "offen" | "erledigt";
@@ -20,9 +23,12 @@ export function TasksPage({
 }) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [modal, setModal] = useState<Task | "new" | null>(null);
+  const [assigning, setAssigning] = useState<Task | null>(null);
+  const [completingTask, setCompletingTask] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("alle");
-  const active = store.people.find((person) => person.id === store.activePersonId) || store.people[0];
+  const isCommunity = store.activePersonId === COMMUNITY_ID;
+  const active = store.people.find((person) => person.id === store.activePersonId);
   const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
   const [, setTick] = useState(0);
 
@@ -59,12 +65,14 @@ export function TasksPage({
 
   const save = (data: Omit<Task, "id" | "createdAt" | "updatedAt">) => {
     const now = new Date().toISOString();
+    const changePersonId = active?.id ?? COMMUNITY_ID;
+    const changePersonName = active?.name ?? "Gemeinschaft";
     if (modal && modal !== "new") {
       const next = { ...modal, ...data, updatedAt: now };
       update({
         tasks: store.tasks.map((task) => (task.id === modal.id ? next : task)),
         changes: [
-          { id: makeId("change"), taskId: modal.id, taskName: next.name, changedAt: now, personId: active.id, personName: active.name, before: modal.name, after: next.name },
+          { id: makeId("change"), taskId: modal.id, taskName: next.name, changedAt: now, personId: changePersonId, personName: changePersonName, before: modal.name, after: next.name },
           ...store.changes
         ]
       });
@@ -76,27 +84,26 @@ export function TasksPage({
     setModal(null);
   };
 
-  const complete = (task: Task, seconds?: number) => {
+  const complete = (task: Task, personId: string, seconds?: number) => {
+    const person = store.people.find((item) => item.id === personId);
+    if (!person) return;
     const category = store.categories.find((item) => item.id === task.categoryId);
-    update({
-      completions: [
-        {
-          id: makeId("completion"),
-          taskId: task.id,
-          taskNameSnapshot: task.name,
-          personId: active.id,
-          personNameSnapshot: active.name,
-          categoryId: task.categoryId,
-          categoryNameSnapshot: category?.name || "",
-          pointsSnapshot: task.points,
-          completedAt: new Date().toISOString(),
-          ...(seconds ? { durationSeconds: seconds } : {})
-        },
-        ...store.completions
-      ]
-    });
+    const { completion, clearTempAssignment } = buildCompletion(task, person, category, seconds);
+    const tasks = clearTempAssignment
+      ? store.tasks.map((item) => (item.id === task.id ? { ...item, tempAssignedPersonId: null } : item))
+      : store.tasks;
+    update({ completions: [completion, ...store.completions], tasks });
     setRunning(null);
-    notify("Erledigt.");
+    setCompletingTask(null);
+    notify(completion.takeoverFromPersonId ? `${task.name} übernommen.` : "Erledigt.");
+  };
+
+  const assign = (personId: string | null, temporary: boolean) => {
+    if (!assigning) return;
+    const patch = temporary ? { tempAssignedPersonId: personId } : { assignedPersonId: personId, tempAssignedPersonId: null };
+    update({ tasks: store.tasks.map((task) => (task.id === assigning.id ? { ...task, ...patch } : task)) });
+    setAssigning(null);
+    notify(personId ? "Zuweisung gespeichert." : "Zuweisung entfernt.");
   };
 
   if (!selectedCategory) {
@@ -197,12 +204,16 @@ export function TasksPage({
               key={task.id}
               task={task}
               category={store.categories.find((cat) => cat.id === task.categoryId)}
+              people={store.people}
+              showKind
               due={isDue(task, store.completions)}
-              onComplete={complete}
+              onComplete={(item) => active && complete(item, active.id)}
+              onRequestComplete={isCommunity ? (item) => setCompletingTask(item) : undefined}
               onEdit={(item) => setModal(item)}
+              onAssign={(item) => setAssigning(item)}
               running={running?.id === task.id ? running.started : null}
               onStart={(item) => {
-                if (running?.id === item.id && running) complete(item, Math.round((Date.now() - running.started) / 1000));
+                if (running?.id === item.id && running && active) complete(item, active.id, Math.round((Date.now() - running.started) / 1000));
                 else setRunning({ id: item.id, started: Date.now() });
               }}
             />
@@ -225,6 +236,15 @@ export function TasksPage({
           defaultCategoryId={selectedCategory.id}
           onClose={() => setModal(null)}
           onSave={save}
+        />
+      )}
+      {assigning && <AssignTaskDialog task={assigning} people={store.people} onClose={() => setAssigning(null)} onAssign={assign} />}
+      {completingTask && (
+        <CompletePersonDialog
+          task={completingTask}
+          people={store.people}
+          onClose={() => setCompletingTask(null)}
+          onChoose={(personId) => complete(completingTask, personId)}
         />
       )}
     </div>
