@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Store } from "./types";
+import { supabase, SHARED_STATE_ID, SHARED_STATE_TABLE } from "./lib/supabaseClient";
 
 // Füllt Felder auf, die in älteren gespeicherten Daten (vor diesem Feature) noch fehlen.
 function normalize(value: Store): Store {
@@ -56,7 +57,7 @@ export function makeId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function loadStore(): Store {
+function loadLocalStore(): Store {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
     return value ? normalize({ ...seed, ...JSON.parse(value) }) : seed;
@@ -65,16 +66,73 @@ function loadStore(): Store {
   }
 }
 
+function saveLocalStore(store: Store) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+  } catch {
+    // z.B. privater Modus / Speicher voll - Anzeige funktioniert trotzdem weiter.
+  }
+}
+
+// localStorage dient als sofortiger, offline-fähiger Zwischenspeicher; Supabase ist die
+// gemeinsame Quelle der Wahrheit, damit beide Personen auf allen Geräten denselben Stand sehen.
 export function useStore() {
-  const [store, setStore] = useState<Store>(loadStore);
+  const [store, setStore] = useState<Store>(loadLocalStore);
+  const [cloudReady, setCloudReady] = useState(false);
+  const skipNextUpload = useRef(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-    } catch {
-      // z.B. privater Modus / Speicher voll - Anzeige funktioniert trotzdem weiter.
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from(SHARED_STATE_TABLE).select("data").eq("id", SHARED_STATE_ID).maybeSingle();
+      if (cancelled) return;
+      if (!error && data?.data) {
+        skipNextUpload.current = true;
+        setStore(normalize({ ...seed, ...(data.data as Store) }));
+      } else if (error) {
+        console.error("Konnte Cloud-Daten nicht laden, nutze lokalen Stand:", error.message);
+      }
+      setCloudReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("hausblick-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: SHARED_STATE_TABLE, filter: `id=eq.${SHARED_STATE_ID}` },
+        (payload) => {
+          const incoming = (payload.new as { data?: Store } | undefined)?.data;
+          if (incoming) {
+            skipNextUpload.current = true;
+            setStore(normalize({ ...seed, ...incoming }));
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    saveLocalStore(store);
+    if (!cloudReady) return;
+    if (skipNextUpload.current) {
+      skipNextUpload.current = false;
+      return;
     }
-  }, [store]);
+    supabase
+      .from(SHARED_STATE_TABLE)
+      .upsert({ id: SHARED_STATE_ID, data: store, updated_at: new Date().toISOString() })
+      .then(({ error }) => {
+        if (error) console.error("Cloud-Sync fehlgeschlagen:", error.message);
+      });
+  }, [store, cloudReady]);
 
   const update = (patch: Partial<Store>) => setStore((old) => ({ ...old, ...patch }));
   return { store, update };
