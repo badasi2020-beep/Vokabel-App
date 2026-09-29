@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Pencil, Plus, Tag, Trash2, Users } from "lucide-react";
+import { CalendarClock, Pencil, Plus, Tag, Trash2, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { TaskModal } from "../components/TaskModal";
+import { isoDate, isPrizeCurrent, startOfWeek } from "../lib/points";
 import { makeId } from "../store";
 import type { Store, Task } from "../types";
 
 const icons = ["Home", "CalendarDays", "Utensils", "Leaf", "Tag"];
+const weekdays = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
 export function SettingsPage({
   store,
@@ -28,7 +30,9 @@ export function SettingsPage({
 
   const updatePersonPrize = (person: Store["people"][number], prize: string) =>
     update({
-      people: store.people.map((item) => (item.id === person.id ? { ...item, prize } : item))
+      people: store.people.map((item) =>
+        item.id === person.id ? { ...item, prize, prizeWeekStart: isoDate(startOfWeek()) } : item
+      )
     });
 
   const addCategory = (event: FormEvent) => {
@@ -74,6 +78,7 @@ export function SettingsPage({
           {store.people.map((person) => {
             const others = store.people.filter((p) => p.id !== person.id);
             const othersLabel = others.length === 1 ? others[0].name : "die andere Person";
+            const current = isPrizeCurrent(person);
             return (
               <div className="settings-item" key={person.id} style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -102,14 +107,51 @@ export function SettingsPage({
                     placeholder="z. B. Frühstück ans Bett"
                     data-testid={`input-prize-${person.id}`}
                   />
+                  {person.prize.trim() && (
+                    <p className="stat-note" style={{ marginTop: 2 }} data-testid={`prize-status-${person.id}`}>
+                      {current ? "Für diese Woche festgelegt." : "Aus einer früheren Woche – bitte für diese Woche neu bestätigen."}
+                    </p>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
         <p className="stat-note" style={{ marginTop: 12 }}>
-          Wird auf der Statistik-Seite unter „Diese Woche" gezeigt, sobald keine Wochenaufgabe mehr offen ist und die
-          Person mit den meisten Punkten feststeht.
+          Muss jede Woche neu festgelegt werden – einfach den Text bestätigen oder ändern. Wird auf der Startseite
+          und in der Statistik unter „Diese Woche" gezeigt.
+        </p>
+      </section>
+
+      <section className="card settings-section">
+        <div className="section-head">
+          <div>
+            <div className="section-label">Erinnerung für die Preis-Runde</div>
+            <h2 style={{ marginTop: 5 }}>Planungstag</h2>
+          </div>
+          <CalendarClock size={18} />
+        </div>
+        <div className="field">
+          <label htmlFor="planning-weekday">
+            An welchem Tag plant ihr die nächste Woche (z. B. Preise neu festlegen)?
+          </label>
+          <select
+            id="planning-weekday"
+            className="select"
+            value={store.planningWeekday}
+            onChange={(event) => update({ planningWeekday: Number(event.target.value) })}
+            data-testid="select-planning-weekday"
+          >
+            {weekdays.map((label, index) => (
+              <option key={label} value={index}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="stat-note" style={{ marginTop: 10 }}>
+          Nur eine Erinnerung – die Woche selbst beginnt immer montags. Aufgaben, Kategorien und Preise könnt ihr
+          davon unabhängig jederzeit ändern.
         </p>
       </section>
 

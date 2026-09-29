@@ -3,7 +3,7 @@ import { BarChart3, ChevronDown, ChevronUp, Tag, Users } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { Fireworks } from "../components/Fireworks";
 import { dateTime } from "../lib/utils";
-import { pointsForPerson, startOfWeek, wonOwnPutzplan } from "../lib/points";
+import { isPrizeCurrent, pointsForPerson, startOfWeek, wonOwnPutzplan } from "../lib/points";
 import type { Store } from "../types";
 
 type Range = "woche" | "monat" | "jahr";
@@ -53,6 +53,7 @@ export function StatsPage({ store }: { store: Store }) {
   const weekLeader = weekLeaders.length === 1 ? weekLeaders[0].person : null;
   const anyPutzplanWin = range === "woche" && weekPointsByPerson.some((item) => item.wonPutzplan === true);
   const showPrizeFooter = range === "woche" && (store.people.some((p) => p.prize.trim()) || !!weekLeader);
+  const currentPrizes = store.people.filter((p) => isPrizeCurrent(p, weekStart));
 
   return (
     <div className="content">
@@ -194,26 +195,33 @@ export function StatsPage({ store }: { store: Store }) {
       {showPrizeFooter && (
         <div className="prize-footer">
           {anyPutzplanWin && <Fireworks />}
-          {store.people.map(({ prize, id, name }) => {
-            if (!prize.trim()) return null;
-            const won = weekPointsByPerson.find((item) => item.person.id === id)?.wonPutzplan;
+          {store.people.map((person) => {
+            if (!person.prize.trim()) return null;
+            if (!currentPrizes.some((p) => p.id === person.id)) {
+              return (
+                <p key={person.id}>
+                  Preis für {person.name}: noch nicht für diese Woche festgelegt (in den Einstellungen nachtragen).
+                </p>
+              );
+            }
+            const won = weekPointsByPerson.find((item) => item.person.id === person.id)?.wonPutzplan;
             if (won === true) {
               return (
-                <p key={id} className="prize-win">
-                  🎆 Preis für {name}: {prize} – Putzplan geschafft!
+                <p key={person.id} className="prize-win">
+                  🎆 Preis für {person.name}: {person.prize} – Putzplan geschafft!
                 </p>
               );
             }
             if (won === false) {
               return (
-                <p key={id}>
-                  Preis für {name}: {prize} (Putzplan diese Woche noch nicht komplett)
+                <p key={person.id}>
+                  Preis für {person.name}: {person.prize} (Putzplan diese Woche noch nicht komplett)
                 </p>
               );
             }
             return (
-              <p key={id}>
-                Preis für {name}: {prize}
+              <p key={person.id}>
+                Preis für {person.name}: {person.prize}
               </p>
             );
           })}

@@ -1,4 +1,4 @@
-import type { Activity, Completion, Task } from "../types";
+import type { Activity, Completion, Person, Task } from "../types";
 
 export function startOfWeek(date: Date = new Date()): Date {
   const d = new Date(date);
@@ -6,6 +6,16 @@ export function startOfWeek(date: Date = new Date()): Date {
   d.setDate(d.getDate() - day);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+export function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+// Preise gelten immer nur für die Woche, in der sie zuletzt (neu) gespeichert wurden -
+// jede Woche muss der Preis neu festgelegt/bestätigt werden.
+export function isPrizeCurrent(person: Person, weekStart: Date = startOfWeek()): boolean {
+  return !!person.prize.trim() && person.prizeWeekStart === isoDate(weekStart);
 }
 
 // Tatsächliche Punkte einer Person in einem Zeitraum: eigene Erledigungen + Aktivitäten,

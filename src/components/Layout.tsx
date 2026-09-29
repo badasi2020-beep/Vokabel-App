@@ -48,7 +48,11 @@ export function Layout({ children, store, onPerson }: { children: ReactNode; sto
       </aside>
       <main className="main">
         <header className="topbar">
-          <span className="topbar-kicker">{location === "/" ? "Euer Zuhause im Blick" : currentLabel || "Hausblick"}</span>
+          {location === "/" ? (
+            <img src="./logo-full.png" alt="Hausblick – Organisations-App für Ihr Zuhause" className="topbar-logo" />
+          ) : (
+            <span className="topbar-kicker">{currentLabel || "Hausblick"}</span>
+          )}
           <div className="topbar-actions">
             <div className="person-switcher" aria-label="Aktive Person">
               {store.people.map((person) => (

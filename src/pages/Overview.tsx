@@ -5,6 +5,7 @@ import { TaskCard } from "../components/TaskCard";
 import { CompletePersonDialog } from "../components/CompletePersonDialog";
 import { isDue, visibleForPerson } from "../lib/utils";
 import { buildCompletion } from "../lib/completion";
+import { isPrizeCurrent } from "../lib/points";
 import { COMMUNITY_ID, makeId } from "../store";
 import type { Store, Task } from "../types";
 
@@ -85,6 +86,24 @@ export function Overview({
         <div>
           <div className="eyebrow">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
           <h1>{isCommunity ? "Eure Woche." : `Hallo, ${active?.name}.`}</h1>
+          {!isCommunity && active && (
+            <p className="stat-note" style={{ marginTop: 6 }} data-testid="text-home-prize">
+              {isPrizeCurrent(active)
+                ? `Dein Preis diese Woche: ${active.prize}`
+                : active.prize.trim()
+                  ? "Euer Preis für diese Woche steht noch nicht fest."
+                  : ""}
+            </p>
+          )}
+          {isCommunity && store.people.some((p) => isPrizeCurrent(p)) && (
+            <p className="stat-note" style={{ marginTop: 6 }} data-testid="text-home-prize">
+              Preise diese Woche:{" "}
+              {store.people
+                .filter((p) => isPrizeCurrent(p))
+                .map((p) => `${p.name} – ${p.prize}`)
+                .join(" · ")}
+            </p>
+          )}
         </div>
         {!isCommunity && (
           <button className="btn btn-primary" onClick={() => setActivityOpen(true)} data-testid="button-log-activity">

@@ -5,6 +5,9 @@ export interface Person {
   color: string;
   // Preis, den diese Person gewinnen kann - wird von der jeweils anderen Person festgelegt.
   prize: string;
+  // Montag (ISO-Datum, YYYY-MM-DD) der Woche, für die der Preis zuletzt (neu) festgelegt wurde.
+  // Stimmt das nicht mehr mit der aktuellen Woche überein, gilt der Preis als noch nicht neu bestätigt.
+  prizeWeekStart: string | null;
 }
 
 export interface Category {
@@ -85,4 +88,7 @@ export interface Store {
   activities: Activity[];
   changes: TaskChange[];
   activePersonId: string;
+  // Wochentag für die Preis-/Wochenplanung, 0 = Sonntag ... 6 = Samstag. Nur eine Erinnerung -
+  // Aufgaben etc. lassen sich davon unabhängig jederzeit bearbeiten.
+  planningWeekday: number;
 }

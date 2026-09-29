@@ -5,7 +5,8 @@ import type { Store } from "./types";
 function normalize(value: Store): Store {
   return {
     ...value,
-    people: value.people.map((person) => ({ ...person, prize: person.prize ?? "" })),
+    people: value.people.map((person) => ({ ...person, prize: person.prize ?? "", prizeWeekStart: person.prizeWeekStart ?? null })),
+    planningWeekday: value.planningWeekday ?? 0,
     tasks: value.tasks.map((task) => ({
       ...task,
       taskKind: task.taskKind ?? "sonstiges",
@@ -29,8 +30,8 @@ export const COMMUNITY_ID = "gemeinschaft";
 // jede Person bekommt so ihre eigene, die Oberfläche dezent einfärbende Akzentfarbe.
 const seed: Store = {
   people: [
-    { id: "p1", name: "Mara", initial: "M", color: "#9A64B9", prize: "" },
-    { id: "p2", name: "Jonas", initial: "J", color: "#679442", prize: "" }
+    { id: "p1", name: "Mara", initial: "M", color: "#9A64B9", prize: "", prizeWeekStart: null },
+    { id: "p2", name: "Jonas", initial: "J", color: "#679442", prize: "", prizeWeekStart: null }
   ],
   categories: [
     { id: "c1", name: "Küche", icon: "Utensils" },
@@ -47,7 +48,8 @@ const seed: Store = {
   completions: [],
   activities: [],
   changes: [],
-  activePersonId: "p1"
+  activePersonId: "p1",
+  planningWeekday: 0
 };
 
 export function makeId(prefix: string): string {
