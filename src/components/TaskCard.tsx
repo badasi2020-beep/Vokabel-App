@@ -19,7 +19,9 @@ export function TaskCard({
   onAssign,
   running,
   onStart,
-  showKind = false
+  showKind = false,
+  justCompleted = false,
+  onUndo
 }: {
   task: Task;
   category?: Category;
@@ -32,10 +34,13 @@ export function TaskCard({
   running?: number | null;
   onStart?: (task: Task) => void;
   showKind?: boolean;
+  justCompleted?: boolean;
+  onUndo?: () => void;
 }) {
   const assigneeId = currentAssignee(task);
   const assignee = people?.find((p) => p.id === assigneeId);
   const isCommunity = !!onRequestComplete;
+  const locked = !due || justCompleted;
 
   const handleCheck = () => {
     if (isCommunity) onRequestComplete!(task);
@@ -45,13 +50,13 @@ export function TaskCard({
   return (
     <div className="task-row" data-testid={`card-task-${task.id}`}>
       <button
-        className={`task-check ${!due ? "done" : ""}`}
-        disabled={!due}
+        className={`task-check ${locked ? "done" : ""}`}
+        disabled={locked}
         onClick={handleCheck}
         data-testid={`button-complete-${task.id}`}
         title="Als erledigt markieren"
       >
-        {!due && <Check size={15} />}
+        {locked && <Check size={15} />}
       </button>
       <div className="task-main">
         <div className="task-name">{task.name}</div>
@@ -62,6 +67,14 @@ export function TaskCard({
           {showKind ? ` · ${kindLabels[task.taskKind]}` : ""}
           {assignee ? ` · → ${assignee.name}` : people ? " · nicht zugewiesen" : ""}
           {!due && <span className="tag">erledigt</span>}
+          {justCompleted && onUndo && (
+            <>
+              <span className="tag">gerade erledigt</span>
+              <button type="button" className="link-undo" onClick={onUndo} data-testid={`button-undo-${task.id}`}>
+                Rückgängig
+              </button>
+            </>
+          )}
         </div>
       </div>
       {task.timerEnabled && due && !isCommunity && (

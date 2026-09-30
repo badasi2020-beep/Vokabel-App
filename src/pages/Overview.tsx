@@ -5,6 +5,7 @@ import { TaskCard } from "../components/TaskCard";
 import { CompletePersonDialog } from "../components/CompletePersonDialog";
 import { isDue, visibleForPerson } from "../lib/utils";
 import { buildCompletion } from "../lib/completion";
+import { useCompletionCooldown } from "../lib/useCooldown";
 import { isPrizeCurrent } from "../lib/points";
 import { COMMUNITY_ID, makeId } from "../store";
 import type { Store, Task } from "../types";
@@ -23,6 +24,7 @@ export function Overview({
   const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
   const [completingTask, setCompletingTask] = useState<Task | null>(null);
   const [, setTick] = useState(0);
+  const { cooldowns, start: startCooldown, clear: clearCooldown } = useCompletionCooldown();
 
   useEffect(() => {
     if (!running) return undefined;
@@ -56,7 +58,16 @@ export function Overview({
     update({ completions: [completion, ...store.completions], tasks });
     setRunning(null);
     setCompletingTask(null);
+    if (task.taskKind === "alltag") startCooldown(task.id, completion.id);
     notify(completion.takeoverFromPersonId ? `${task.name} übernommen. Danke, ${person.name}.` : `${task.name} ist erledigt. Danke, ${person.name}.`);
+  };
+
+  const undoCompletion = (task: Task) => {
+    const completionId = cooldowns[task.id];
+    if (!completionId) return;
+    update({ completions: store.completions.filter((item) => item.id !== completionId) });
+    clearCooldown(task.id);
+    notify(`${task.name} wieder als offen markiert.`);
   };
 
   const submitActivity = (event: FormEvent) => {
@@ -150,6 +161,8 @@ export function Overview({
                   people={isCommunity ? store.people : undefined}
                   onComplete={(item) => active && complete(item, active.id)}
                   onRequestComplete={isCommunity ? (item) => setCompletingTask(item) : undefined}
+                  justCompleted={!!cooldowns[task.id]}
+                  onUndo={() => undoCompletion(task)}
                   running={running?.id === task.id ? running.started : null}
                   onStart={(item) => {
                     if (running?.id === item.id && active) {

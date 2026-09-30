@@ -7,6 +7,7 @@ import { AssignTaskDialog } from "../components/AssignTaskDialog";
 import { CompletePersonDialog } from "../components/CompletePersonDialog";
 import { isDue } from "../lib/utils";
 import { buildCompletion } from "../lib/completion";
+import { useCompletionCooldown } from "../lib/useCooldown";
 import { COMMUNITY_ID, makeId } from "../store";
 import type { Store, Task } from "../types";
 
@@ -31,6 +32,7 @@ export function TasksPage({
   const active = store.people.find((person) => person.id === store.activePersonId);
   const [running, setRunning] = useState<{ id: string; started: number } | null>(null);
   const [, setTick] = useState(0);
+  const { cooldowns, start: startCooldown, clear: clearCooldown } = useCompletionCooldown();
 
   useEffect(() => {
     if (!running) return undefined;
@@ -95,7 +97,16 @@ export function TasksPage({
     update({ completions: [completion, ...store.completions], tasks });
     setRunning(null);
     setCompletingTask(null);
+    if (task.taskKind === "alltag") startCooldown(task.id, completion.id);
     notify(completion.takeoverFromPersonId ? `${task.name} übernommen.` : "Erledigt.");
+  };
+
+  const undoCompletion = (task: Task) => {
+    const completionId = cooldowns[task.id];
+    if (!completionId) return;
+    update({ completions: store.completions.filter((item) => item.id !== completionId) });
+    clearCooldown(task.id);
+    notify(`${task.name} wieder als offen markiert.`);
   };
 
   const assign = (personId: string | null, temporary: boolean) => {
@@ -209,6 +220,8 @@ export function TasksPage({
               due={isDue(task, store.completions)}
               onComplete={(item) => active && complete(item, active.id)}
               onRequestComplete={isCommunity ? (item) => setCompletingTask(item) : undefined}
+              justCompleted={!!cooldowns[task.id]}
+              onUndo={() => undoCompletion(task)}
               onEdit={(item) => setModal(item)}
               onAssign={(item) => setAssigning(item)}
               running={running?.id === task.id ? running.started : null}

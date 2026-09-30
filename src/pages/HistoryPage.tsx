@@ -3,9 +3,14 @@ import { BookOpen } from "lucide-react";
 import { dateTime } from "../lib/utils";
 import type { Store } from "../types";
 
-export function HistoryPage({ store }: { store: Store }) {
+export function HistoryPage({ store, update, notify }: { store: Store; update: (patch: Partial<Store>) => void; notify: (text: string) => void }) {
   const [tab, setTab] = useState<"abschlüsse" | "änderungen">("abschlüsse");
   const entries = [...store.completions].sort((a, b) => b.completedAt.localeCompare(a.completedAt));
+
+  const undo = (id: string, taskName: string) => {
+    update({ completions: store.completions.filter((item) => item.id !== id) });
+    notify(`${taskName} rückgängig gemacht.`);
+  };
 
   return (
     <div className="content">
@@ -35,6 +40,15 @@ export function HistoryPage({ store }: { store: Store }) {
                     {entry.personNameSnapshot} · {entry.categoryNameSnapshot} · {dateTime(entry.completedAt)}
                     {entry.pointsSnapshot ? ` · +${entry.pointsSnapshot} Punkte` : ""}
                     {entry.durationSeconds ? ` · ${Math.floor(entry.durationSeconds / 60)}:${String(entry.durationSeconds % 60).padStart(2, "0")} Min.` : ""}
+                    {" · "}
+                    <button
+                      type="button"
+                      className="link-undo"
+                      onClick={() => undo(entry.id, entry.taskNameSnapshot)}
+                      data-testid={`button-undo-history-${entry.id}`}
+                    >
+                      Rückgängig
+                    </button>
                   </div>
                 </div>
               ))}
