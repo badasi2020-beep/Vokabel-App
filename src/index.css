@@ -69,6 +69,10 @@ a { color: inherit; text-decoration: none; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: white; font-size: 11px; font-weight: 700; border: 2px solid transparent; }
 .avatar.selected { border-color: hsl(var(--accent)); box-shadow: 0 0 0 2px hsl(var(--card)); }
 .content { max-width: 1240px; margin: 0 auto; padding: 42px 38px 70px; }
+
+/* Startseite: das Haus-Symbol schimmert ganz dezent im Hintergrund durch, ohne vom Inhalt abzulenken */
+.home-content { position: relative; z-index: 0; }
+.home-watermark { position: absolute; top: -6px; right: -10px; width: 300px; height: auto; opacity: .07; z-index: -1; pointer-events: none; user-select: none; }
 .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 22px; margin-bottom: 30px; }
 .eyebrow { color: hsl(var(--primary)); font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 h1, h2, h3, p { margin: 0; }
@@ -192,6 +196,7 @@ h3 { font-size: 17px; letter-spacing: -.02em; }
   .topbar { padding: 0 24px; }
 }
 @media (max-width: 640px) {
+  .home-watermark { width: 170px; }
   .app-shell { display: block; }
   .sidebar { display: none; }
   .topbar { height: 68px; padding: 0 17px; }

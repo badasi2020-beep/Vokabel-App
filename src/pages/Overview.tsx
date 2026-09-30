@@ -81,7 +81,8 @@ export function Overview({
   };
 
   return (
-    <div className="content">
+    <div className="content home-content">
+      <img src="./watermark-house.png" alt="" aria-hidden="true" className="home-watermark" />
       <div className="page-heading">
         <div>
           <div className="eyebrow">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</div>
