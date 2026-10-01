@@ -8,9 +8,10 @@ import type { Store } from "../types";
 
 type Range = "woche" | "monat" | "jahr";
 
-export function StatsPage({ store }: { store: Store }) {
+export function StatsPage({ store, update, notify }: { store: Store; update: (patch: Partial<Store>) => void; notify: (text: string) => void }) {
   const [range, setRange] = useState<Range>("woche");
   const [showAlltag, setShowAlltag] = useState(false);
+  const [expandedPersonId, setExpandedPersonId] = useState<string | null>(null);
   const since = new Date();
   since.setDate(since.getDate() - (range === "monat" ? 30 : range === "jahr" ? 365 : 7));
 
@@ -29,6 +30,28 @@ export function StatsPage({ store }: { store: Store }) {
       points: pointsForPerson(person.id, store.completions, store.activities, since)
     }))
     .filter((person) => person.count || inRange.length === 0);
+
+  // Woher die Punkte einer Person kommen - Erledigungen und eingetragene Aktivitäten zusammen,
+  // damit sich jeder Punkt in "Nach Person" nachvollziehen und einzeln rückgängig machen lässt.
+  type PointEvent = { id: string; label: string; points: number; at: string; kind: "completion" | "activity" };
+  const eventsForPerson = (personId: string): PointEvent[] => {
+    const fromCompletions: PointEvent[] = inRange
+      .filter((item) => item.personId === personId)
+      .map((item) => ({ id: item.id, label: item.taskNameSnapshot, points: item.pointsSnapshot || 0, at: item.completedAt, kind: "completion" }));
+    const fromActivities: PointEvent[] = store.activities
+      .filter((item) => item.personId === personId && new Date(item.createdAt) >= since)
+      .map((item) => ({ id: item.id, label: item.name, points: item.points, at: item.createdAt, kind: "activity" }));
+    return [...fromCompletions, ...fromActivities].sort((a, b) => b.at.localeCompare(a.at));
+  };
+
+  const undoEvent = (event: PointEvent) => {
+    if (event.kind === "completion") {
+      update({ completions: store.completions.filter((item) => item.id !== event.id) });
+    } else {
+      update({ activities: store.activities.filter((item) => item.id !== event.id) });
+    }
+    notify(`${event.label} rückgängig gemacht.`);
+  };
 
   const byCategory = store.categories
     .map((cat) => ({ ...cat, count: completions.filter((item) => item.categoryId === cat.id).length }))
@@ -120,23 +143,55 @@ export function StatsPage({ store }: { store: Store }) {
             <Users size={18} />
           </div>
           <div className="settings-list">
-            {byPerson.map((person) => (
-              <div className="settings-item" key={person.id}>
-                <div className="person-edit">
-                  <span className="avatar" style={{ background: person.color }}>
-                    {person.initial}
-                  </span>
-                  <div>
-                    <strong>
-                      {person.name}
-                      {range === "woche" && weekLeader?.id === person.id ? " 🏆" : ""}
-                    </strong>
-                    <div className="stat-note">{person.count} Abschlüsse</div>
-                  </div>
+            {byPerson.map((person) => {
+              const events = expandedPersonId === person.id ? eventsForPerson(person.id) : [];
+              return (
+                <div key={person.id}>
+                  <button
+                    type="button"
+                    className="settings-item person-row-toggle"
+                    onClick={() => setExpandedPersonId(expandedPersonId === person.id ? null : person.id)}
+                    data-testid={`button-toggle-person-${person.id}`}
+                  >
+                    <div className="person-edit">
+                      <span className="avatar" style={{ background: person.color }}>
+                        {person.initial}
+                      </span>
+                      <div>
+                        <strong>
+                          {person.name}
+                          {range === "woche" && weekLeader?.id === person.id ? " 🏆" : ""}
+                        </strong>
+                        <div className="stat-note">{person.count} Abschlüsse</div>
+                      </div>
+                    </div>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <strong style={{ color: "hsl(var(--primary))" }}>{person.points} P.</strong>
+                      {expandedPersonId === person.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </span>
+                  </button>
+                  {expandedPersonId === person.id && (
+                    <div className="timeline person-events">
+                      {events.length ? (
+                        events.map((event) => (
+                          <div className="timeline-item" key={`${event.kind}-${event.id}`}>
+                            <div className="timeline-title">{event.label}</div>
+                            <div className="timeline-meta">
+                              {dateTime(event.at)} · +{event.points} Punkte ·{" "}
+                              <button type="button" className="link-undo" onClick={() => undoEvent(event)} data-testid={`button-undo-stat-${event.id}`}>
+                                Rückgängig
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="empty">Keine Punkte in diesem Zeitraum.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <strong style={{ color: "hsl(var(--primary))" }}>{person.points} P.</strong>
-              </div>
-            ))}
+              );
+            })}
             {byPerson.length === 0 && <div className="empty">Noch keine Daten für diesen Zeitraum.</div>}
           </div>
         </section>

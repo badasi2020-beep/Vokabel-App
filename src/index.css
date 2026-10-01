@@ -139,6 +139,9 @@ h3 { font-size: 17px; letter-spacing: -.02em; }
 .settings-section + .settings-section { margin-top: 15px; }
 .settings-list { display: grid; gap: 10px; margin-top: 17px; }
 .settings-item { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 11px; background: hsl(var(--background)); border-radius: 14px; }
+.person-row-toggle { width: 100%; border: 0; text-align: left; color: inherit; }
+.person-row-toggle:hover { background: hsl(var(--muted)); }
+.person-events { margin: 2px 4px 0; padding: 2px 11px 4px; }
 .person-edit { display: flex; gap: 11px; align-items: center; flex: 1; }
 .person-edit .input { max-width: 220px; }
 .icon-choice { display: flex; gap: 6px; flex-wrap: wrap; }

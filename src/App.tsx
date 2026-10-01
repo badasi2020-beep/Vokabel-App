@@ -38,7 +38,7 @@ function Router() {
           <HistoryPage store={store} update={update} notify={notify} />
         </Route>
         <Route path="/statistik">
-          <StatsPage store={store} />
+          <StatsPage store={store} update={update} notify={notify} />
         </Route>
         <Route path="/einstellungen">
           <SettingsPage store={store} update={update} notify={notify} />
