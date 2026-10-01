@@ -18,17 +18,17 @@ export function StatsPage({ store }: { store: Store }) {
   const completions = inRange.filter((entry) => entry.taskKindSnapshot !== "alltag");
   const alltagCompletions = inRange.filter((entry) => entry.taskKindSnapshot === "alltag");
 
-  const points =
-    completions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) +
-    store.activities.filter((item) => new Date(item.createdAt) >= since).reduce((sum, item) => sum + item.points, 0);
+  const alltagPoints = alltagCompletions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0);
+  const activityPoints = store.activities.filter((item) => new Date(item.createdAt) >= since).reduce((sum, item) => sum + item.points, 0);
+  const points = completions.reduce((sum, item) => sum + (item.pointsSnapshot || 0), 0) + activityPoints + alltagPoints;
 
   const byPerson = store.people
     .map((person) => ({
       ...person,
-      count: completions.filter((item) => item.personId === person.id).length,
+      count: inRange.filter((item) => item.personId === person.id).length,
       points: pointsForPerson(person.id, store.completions, store.activities, since)
     }))
-    .filter((person) => person.count || completions.length === 0);
+    .filter((person) => person.count || inRange.length === 0);
 
   const byCategory = store.categories
     .map((cat) => ({ ...cat, count: completions.filter((item) => item.categoryId === cat.id).length }))
@@ -84,7 +84,7 @@ export function StatsPage({ store }: { store: Store }) {
         <div className="card stat-tile">
           <div className="section-label">Gemeinsame Punkte</div>
           <div className="stat-value">{points}</div>
-          <div className="stat-note">Für sichtbare kleine Schritte</div>
+          <div className="stat-note">{alltagPoints > 0 ? `Davon ${alltagPoints} aus Alltagsaufgaben` : "Für sichtbare kleine Schritte"}</div>
         </div>
         <div className="card stat-tile">
           <div className="section-label">Kategorien</div>

@@ -18,12 +18,12 @@ export function isPrizeCurrent(person: Person, weekStart: Date = startOfWeek()):
   return !!person.prize.trim() && person.prizeWeekStart === isoDate(weekStart);
 }
 
-// Tatsächliche Punkte einer Person in einem Zeitraum: eigene Erledigungen + Aktivitäten,
+// Tatsächliche Punkte einer Person in einem Zeitraum: alle Erledigungen (auch Alltag) + Aktivitäten,
 // minus Abzug für Aufgaben, die ihr zugewiesen waren, aber von der anderen Person übernommen wurden.
-// Alltagsaufgaben zählen hier bewusst nicht mit (siehe Statistik: die werden separat gezeigt
-// und sollen den Wochenvergleich/Extra-Preis nicht durch häufige Routine-Häkchen verzerren).
+// Die Statistik-Seite zeigt Alltagsaufgaben separat ausgewiesen, zählt sie aber in diese
+// Gesamtpunktzahl mit ein - danach bemisst sich auch der Extra-Preis.
 export function pointsForPerson(personId: string, completions: Completion[], activities: Activity[], since: Date): number {
-  const relevant = completions.filter((c) => c.taskKindSnapshot !== "alltag");
+  const relevant = completions;
   const earned = relevant
     .filter((c) => c.personId === personId && new Date(c.completedAt) >= since)
     .reduce((sum, c) => sum + (c.pointsSnapshot || 0), 0);
