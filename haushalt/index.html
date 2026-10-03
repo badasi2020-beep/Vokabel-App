@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Haushalt</title>
+  <meta name="theme-color" content="#2f6f5e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Haushalt">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-title" id="topbar-title">Haushalt</div>
+    <button class="profile-chip" id="profile-chip" data-action="switch-profile" aria-label="Profil wechseln"></button>
+  </header>
+
+  <main id="view"></main>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="overview"><span class="tab-icon">🏠</span><span>Übersicht</span></button>
+    <button data-tab="list"><span class="tab-icon">📋</span><span>Monat</span></button>
+    <button data-tab="add" class="tab-add" aria-label="Eintragen"><span class="tab-plus">+</span></button>
+    <button data-tab="stats"><span class="tab-icon">🧩</span><span>Auswertung</span></button>
+    <button data-tab="more"><span class="tab-icon">⚙️</span><span>Mehr</span></button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+  <div id="modal" class="modal" hidden></div>
+  <input type="file" id="import-file" accept=".json,application/json" hidden>
+
+  <script src="app.js"></script>
+</body>
+</html>
