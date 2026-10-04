@@ -517,8 +517,8 @@ function viewWelcome() {
       ${field('p1', 'Person 1')}
       ${field('p2', 'Person 2')}
       <h3>Kinder</h3>
-      ${field('k1', 'Gemeinsames Kind')}
-      ${field('k2', 'Kind von Person 1')}
+      ${field('k1', 'Kind 1')}
+      ${field('k2', 'Kind 2 / Bonuskind')}
     </div>
     <div class="card">
       <h3>Wer benutzt dieses Handy?</h3>
@@ -809,8 +809,8 @@ function viewMore() {
       <h3>Namen</h3>
       ${nameField('p1', 'Person 1')}
       ${nameField('p2', 'Person 2')}
-      ${nameField('k1', 'Gemeinsames Kind')}
-      ${nameField('k2', 'Kind von Person 1')}
+      ${nameField('k1', 'Kind 1')}
+      ${nameField('k2', 'Kind 2 / Bonuskind')}
       <div class="small muted">Wird automatisch gespeichert.</div>
     </div>
 
@@ -1002,7 +1002,7 @@ function viewCategoryForm() {
     </div>
     ${f.type === 'expense' ? `<div class="field"><span class="field-label">Standard „Für wen“ beim Eintragen</span>
       ${whoChips(f.defaultFor || 'haushalt', 'cform-who')}
-      <div class="small muted" style="margin-top:6px">Beispiel: Kita → automatisch das gemeinsame Kind.</div></div>` : ''}
+      <div class="small muted" style="margin-top:6px">Beispiel: Kita → automatisch Kind 1.</div></div>` : ''}
     <button class="btn" data-action="cform-save">Speichern</button>
     ${f.id ? '<button class="btn danger" data-action="cform-delete">Kategorie löschen</button>' : ''}`;
 }
