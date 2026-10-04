@@ -106,9 +106,10 @@ function loop(step) {
   arcade.raf = requestAnimationFrame(frame);
 }
 
-function drawEmoji(ctx, emoji, x, y, size, flip = false) {
+function drawEmoji(ctx, emoji, x, y, size, flip = false, outline = null) {
   ctx.save();
   ctx.translate(x, y);
+  if (outline) { ctx.shadowColor = outline; ctx.shadowBlur = 6; }
   if (flip) ctx.scale(-1, 1);
   ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
   ctx.textAlign = 'center';
@@ -156,49 +157,62 @@ function startJump() {
     items = items.filter(it => {
       const hit = Math.hypot(it.x - dolphin.x, it.y - dolphin.y) < (it.kind === 'jelly' ? 38 : 42);
       if (hit) {
-        if (it.kind === 'jelly') { setArcadeScore(arcade.score - 3); hitFlash = 15; popups.push({ x: it.x, y: it.y - 30, text: '−3', life: 40, color: '#E8479A' }); }
-        else { const pts = it.kind === 'shell' ? 5 : 1; setArcadeScore(arcade.score + pts); popups.push({ x: it.x, y: it.y - 20, text: '+' + pts, life: 40, color: '#ffffff' }); }
+        if (it.kind === 'jelly') { setArcadeScore(arcade.score - 3); hitFlash = 15; popups.push({ x: it.x, y: it.y - 30, text: '−3', life: 40, color: '#FF6FB5' }); }
+        else { const pts = it.kind === 'shell' ? 5 : 1; setArcadeScore(arcade.score + pts); popups.push({ x: it.x, y: it.y - 20, text: '+' + pts, life: 40, color: '#FFE14D' }); }
         return false;
       }
       return it.x > -40;
     });
 
-    // Zeichnen
+    // Zeichnen: warmer, heller Himmel und dunkles Wasser, damit der blaue Delfin,
+    // die Sterne und die Quallen sich deutlich abheben
     const sky = ctx.createLinearGradient(0, 0, 0, WATER);
-    sky.addColorStop(0, '#AEE6F8'); sky.addColorStop(1, '#FFD6EC');
+    sky.addColorStop(0, '#FFC98F'); sky.addColorStop(1, '#FFF1DC');
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
     drawEmoji(ctx, '☀️', 410, 70, 50);
-    drawEmoji(ctx, '☁️', (W + 60 - (t * 0.6) % (W + 120)), 110, 46);
 
-    items.forEach(it => {
-      if (it.kind === 'star') drawEmoji(ctx, '⭐', it.x, it.y, 38);
-      if (it.kind === 'shell') drawEmoji(ctx, '🐚', it.x, it.y, 42);
-      if (it.kind === 'jelly') drawJelly(ctx, it.x, it.y, t);
-    });
-
-    drawEmoji(ctx, '🐬', dolphin.x, dolphin.y - 10, 64, true);
-
-    // Wasser
-    ctx.fillStyle = 'rgba(58,174,220,0.85)';
+    // Wasser (hinter Delfin und Quallen, damit nichts verdeckt wird)
+    const sea = ctx.createLinearGradient(0, WATER, 0, H);
+    sea.addColorStop(0, '#1C6FB5'); sea.addColorStop(1, '#0B3463');
+    ctx.fillStyle = sea;
     ctx.beginPath();
     ctx.moveTo(0, H);
     for (let x = 0; x <= W; x += 10) ctx.lineTo(x, WATER + 18 + Math.sin((x + t * speed) / 30) * 6);
     ctx.lineTo(W, H);
     ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 10) ctx.lineTo(x, WATER + 18 + Math.sin((x + t * speed) / 30) * 6);
+    ctx.stroke();
+
+    items.forEach(it => {
+      if (it.kind === 'star') drawEmoji(ctx, '⭐', it.x, it.y, 42, false, 'rgba(110,50,0,0.9)');
+      if (it.kind === 'shell') drawEmoji(ctx, '🐚', it.x, it.y, 46, false, 'rgba(110,50,0,0.9)');
+      if (it.kind === 'jelly') drawJelly(ctx, it.x, it.y, t);
+    });
+
+    drawEmoji(ctx, '🐬', dolphin.x, dolphin.y - 10, 68, true, 'rgba(11,52,99,0.95)');
 
     popups = popups.filter(p => {
       p.y -= 1 * dt; p.life -= dt;
-      ctx.fillStyle = p.color; ctx.font = 'bold 26px Nunito, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(p.text, p.x, p.y);
+      ctx.font = 'bold 30px Nunito, sans-serif'; ctx.textAlign = 'center';
+      ctx.lineWidth = 6; ctx.strokeStyle = '#1B2A3A'; ctx.lineJoin = 'round';
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.color; ctx.fillText(p.text, p.x, p.y);
       return p.life > 0;
     });
 
-    if (hitFlash > 0) { hitFlash -= dt; ctx.fillStyle = 'rgba(232,71,154,0.25)'; ctx.fillRect(0, 0, W, H); }
+    if (hitFlash > 0) { hitFlash -= dt; ctx.fillStyle = 'rgba(232,71,154,0.3)'; ctx.fillRect(0, 0, W, H); }
     if (t < 150) {
+      ctx.fillStyle = 'rgba(27,42,58,0.8)';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(50, 175, W - 100, 90, 20) : ctx.rect(50, 175, W - 100, 90);
+      ctx.fill();
       ctx.fillStyle = 'white'; ctx.font = 'bold 28px Nunito, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('Tippen = springen', W / 2, 210);
+      ctx.fillText('Tippen = springen', W / 2, 215);
       ctx.font = 'bold 20px Nunito, sans-serif';
-      ctx.fillText('Zweimal tippen = Doppelsprung', W / 2, 245);
+      ctx.fillText('Zweimal tippen = Doppelsprung', W / 2, 248);
     }
   });
 }
@@ -206,13 +220,16 @@ function startJump() {
 function drawJelly(ctx, x, y, t) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.fillStyle = '#c38cf2';
+  ctx.fillStyle = '#E8479A';
+  ctx.strokeStyle = '#5A1450';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(0, 0, 24, Math.PI, 0);
+  ctx.arc(0, 0, 26, Math.PI, 0);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = '#a066d6';
-  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.strokeStyle = '#FFB6D9';
+  ctx.lineWidth = 5;
   for (let i = -15; i <= 15; i += 10) {
     ctx.beginPath();
     ctx.moveTo(i, 0);
