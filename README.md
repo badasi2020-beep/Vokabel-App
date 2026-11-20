@@ -39,3 +39,7 @@ Für die Foto-Erkennung wird das Bild an Claude geschickt (mit Schlüssel); ohne
 2. Source = *Deploy from a branch*, Branch `main`, Ordner `/ (root)`, **Save**.
 3. Nach 1–2 Minuten ist die App erreichbar unter `https://<benutzername>.github.io/<repository>/`
 4. Auf dem Handy öffnen und **„Zum Home-Bildschirm hinzufügen“** wählen.
+
+## 🏰 Burgwacht (Tower Defense)
+
+Im Ordner [`burgwacht/`](burgwacht/) liegt ein Fantasy-Tower-Defense-Spiel fürs iPhone. Nach dem Einschalten von GitHub Pages ist es unter `https://<benutzername>.github.io/<repository>/burgwacht/` erreichbar.

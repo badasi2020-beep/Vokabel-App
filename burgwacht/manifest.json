@@ -1,0 +1,16 @@
+{
+  "name": "Burgwacht",
+  "short_name": "Burgwacht",
+  "description": "Fantasy Tower Defense: Türme bauen, spezialisieren und die Burg verteidigen.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#16202b",
+  "theme_color": "#16202b",
+  "lang": "de",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
